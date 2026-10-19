@@ -1,0 +1,42 @@
+import { describe,it,expect } from 'vitest';
+import { recognizePage,detectProvider } from '../../src/core/capture';
+import { extractedNumber,mappedSnapshot } from '../../src/core/parse';
+import { agentPrompt,parseAgentConfig } from '../../src/core/agent-config';
+import { validateAccount,safeUrl } from '../../src/core/validation';
+import { createAccount } from '../../src/core/providers';
+import type { PageField } from '../../src/core/types';
+const field=(text:string,context:string,selector='#quota'):PageField=>({text,context,selector});
+const read=(fields:PageField[])=>recognizePage({url:'https://fixture.invalid/usage',title:'Example AI',fields},'capture-id');
+describe('page recognition without guesses',()=>{
+  it('extracts remaining and used across five-hour/week/month and keeps zero',()=>{
+    const r=read([field('78%','5 小时 剩余 78%','#five'),field('已用 25%','周额度 已用 25%','#week'),field('0%','月额度 剩余 0%','#month')]);
+    expect(r.snapshot.metrics.map(m=>[m.period,m.remainingPercent])).toEqual([['5h',78],['week',75],['month',0]]);
+  });
+  it('extracts English current session and weekly limit',()=>{const r=recognizePage({url:'https://claude.ai/settings/usage',title:'Claude',fields:[field('20% used','Current session 20% used','#session'),field('75% remaining','Weekly limit 75% remaining','#week')]},'id');expect(r.snapshot.metrics.map(m=>m.remainingPercent)).toEqual([80,75]);expect(r.snapshot.metrics[0].period).toBe('5h');});
+  it('keeps daily quota out of five-hour column',()=>expect(read([field('40%','Daily quota remaining 40%')]).snapshot.metrics[0].period).toBe('day'));
+  it('does not infer usage direction from bare percentage',()=>expect(()=>read([field('75%','Weekly quota 75%')])).toThrow('没有识别'));
+  it('does not turn a subscription price into a balance',()=>expect(()=>read([field('$20','Pro price $20 per month')])).toThrow('没有识别'));
+  it('ignores upgrade offers',()=>expect(()=>read([field('$50','Upgrade now balance $50')])).toThrow('没有识别'));
+  it('recognizes monetary amounts and currencies',()=>{const r=read([field('¥186.42','账户余额 ¥186.42','#cny'),field('$12.5','Available balance $12.5','#usd')]);expect(r.snapshot.metrics.map(m=>[m.period,m.remaining,m.unit])).toEqual([['balance',186.42,'CNY'],['balance',12.5,'USD']]);});
+  it('recognizes used/total requests and updates using captured mapping',()=>{const r=read([field('20 / 100 requests used','Weekly 20 / 100 requests used')]);expect(r.snapshot.metrics[0].remaining).toBe(80);const newer=mappedSnapshot(r.draft,()=> '30 / 100 requests used','web');expect(newer.metrics[0].remainingPercent).toBe(70);});
+  it('finds visible account and current plan',()=>{const r=read([field('test@example.invalid','Account','#email'),field('Pro','Current plan Pro','#plan'),field('80%','Week remaining 80%','#quota')]);expect(r.draft.account).toBe('test@example.invalid');expect(r.snapshot.plan).toBe('Pro');});
+  it('warns when no account name is available',()=>expect(read([field('80%','Weekly remaining 80%')]).warnings.join('')).toContain('账号标识'));
+  it('allows multiple distinct model limits and avoids exact duplicates',()=>{const r=read([field('75%','Weekly Sonnet remaining 75%','#sonnet'),field('45%','Weekly Opus remaining 45%','#opus'),field('75%','Weekly Sonnet remaining 75%','#sonnet')]);expect(r.snapshot.metrics).toHaveLength(2);expect(r.snapshot.metrics[1].label).toContain('Opus');});
+  it('rejects non-HTTPS capture sources',()=>expect(()=>recognizePage({url:'http://localhost',title:'x',fields:[]},'id')).toThrow('HTTPS'));
+  it('matches exact trusted platform domains, not lookalikes',()=>{expect(detectProvider('https://chatgpt.com/usage')).toBe('codex');expect(detectProvider('https://chatgpt.com.evil.invalid')).toBe('custom');});
+  it('keeps hash navigation used by subscription pages',()=>expect(safeUrl('https://example.com/#/billing').href).toBe('https://example.com/#/billing'));
+  it('refuses multiple ambiguous numbers',()=>{expect(extractedNumber('20 days 40 tokens','number')).toBeUndefined();expect(extractedNumber('25% or 75%','percent')).toBeUndefined();});
+  it('does not assume an unknown platform session is five hours',()=>expect(read([field('20% used','Current session 20% used')]).snapshot.metrics[0].period).toBe('other'));
+  it('keeps explicit token magnitude units',()=>expect(read([field('2M tokens remaining','Monthly quota 2M tokens remaining')]).snapshot.metrics[0].remaining).toBe(2000000));
+});
+describe('Agent import and secret-free guidance',()=>{
+  const config={format:'123token-config-v1',accounts:[{providerId:'deepseek',account:'work',secret:''}]};
+  it('imports supported presets without requiring secrets in chat',()=>{const a=parseAgentConfig(JSON.stringify(config));expect(a[0].endpoint).toContain('deepseek');expect(a[0].id).toBe('');});
+  it('accepts a fenced JSON response',()=>expect(parseAgentConfig('```json\n'+JSON.stringify(config)+'\n```')).toHaveLength(1));
+  it('does not echo secret, headers or URL tokens in a prompt',()=>{const p=agentPrompt({...createAccount('codex'),secret:'very-private-key',headers:'private-cookie',infoUrl:'https://chatgpt.com/usage?token=secret-query#private-fragment'});expect(p).not.toContain('very-private-key');expect(p).not.toContain('private-cookie');expect(p).not.toContain('secret-query');expect(p).not.toContain('private-fragment');expect(p).toContain('123token-config-v1');});
+  it('requires custom field mappings and rejects executable URLs',()=>{expect(()=>parseAgentConfig(JSON.stringify({account:'x',platformName:'x',website:'https://example.com',infoUrl:'https://example.com',engine:'browser'}))).toThrow('映射');expect(()=>parseAgentConfig(JSON.stringify({providerId:'deepseek',account:'x',infoUrl:'javascript:alert(1)'}))).toThrow('HTTPS');});
+  it('rejects invalid JSON and unsupported formats',()=>{expect(()=>parseAgentConfig('{broken')).toThrow('JSON');expect(()=>parseAgentConfig('{"format":"future","accounts":[]}')).toThrow('版本');});
+  it('ignores injected identity fields so imports remain new',()=>{const a=parseAgentConfig(JSON.stringify({providerId:'deepseek',account:'x',id:'existing',revision:80,preserveSecret:true}))[0];expect(a.id).toBe('');expect(a.revision).toBe(0);expect(a.preserveSecret).toBeUndefined();});
+  it('preserves built-in logo choices',()=>{const a=parseAgentConfig(JSON.stringify({providerId:'deepseek',account:'x',appearance:{logo:{kind:'builtin',name:'claude'},backgroundOpacity:.08}}))[0];expect(a.appearance?.logo).toEqual({kind:'builtin',name:'claude'});});
+  it('rejects remote/active logo payloads and excessive opacity',()=>{const a={...createAccount('deepseek'),account:'x'};for(const appearance of [{logo:{kind:'image',dataUrl:'https://evil.invalid/image'}},{logo:{kind:'image',dataUrl:'data:image/svg+xml,<svg onload=alert(1) />'}},{backgroundOpacity:.9},{logo:{kind:'builtin',name:'bad'}}])expect(()=>validateAccount({...a,appearance:appearance as any})).toThrow();});
+});

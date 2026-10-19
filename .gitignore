@@ -1,0 +1,10 @@
+node_modules/
+dist/
+dist-electron/
+.tools/
+artifacts/
+发布/
+data/
+test-results/
+playwright-report/
+*.log

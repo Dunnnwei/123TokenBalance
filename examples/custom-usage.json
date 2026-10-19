@@ -1,0 +1,6 @@
+{
+  "plan": "Pro",
+  "quota": { "five_hour": 72, "week": 45, "month": 90 },
+  "wallet": { "available": 18.5, "currency": "USD" },
+  "reset_at": "2026-10-19T00:00:00Z"
+}

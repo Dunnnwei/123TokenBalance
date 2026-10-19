@@ -1,0 +1,17 @@
+import { useState } from 'react';
+import { Button, Textarea, Dialog, DialogContent, DialogTitle, DialogDescription, CopyIcon, FolderIcon, Loader } from 'haui';
+import type { Account } from '../core/types';
+import { agentPrompt } from '../core/agent-config';
+import { Field, Notice } from './common';
+
+export function AgentHelp({context,onClose,onImported}:{context?:Partial<Account>;onClose:()=>void;onImported?:()=>void}){
+  const [text,setText]=useState(''),[preview,setPreview]=useState<Account[]>([]),[error,setError]=useState(''),[status,setStatus]=useState(''),[busy,setBusy]=useState(false);
+  const run=async(fn:()=>Promise<void>)=>{if(busy)return;setBusy(true);setError('');try{await fn();}catch(e){setError(e instanceof Error?e.message:'操作失败');}finally{setBusy(false);}};
+  const change=(value:string)=>{setText(value);setPreview([]);setStatus('');};
+  return <Dialog open onOpenChange={o=>{if(!o&&!busy)onClose();}}><DialogContent className="account-dialog" onPointerDownOutside={e=>e.preventDefault()}><DialogTitle>Agent 帮助与配置导入</DialogTitle><DialogDescription>把提示词交给你自己的 Agent，让它指导登录、核实字段并生成可直接导入的配置。</DialogDescription>
+    <div className="agent-step"><span className="step-number">01</span><div><h3>复制提示词，告诉 Agent 要添加哪个账号</h3><p className="section-copy">提示词包含接入步骤和配置格式，自动附带当前平台与页面地址，不包含 API Key、Cookie 或附加请求头。</p><Button variant="default" onClick={()=>void run(async()=>{await window.tokenBalance.copy(agentPrompt(context));setStatus('提示词已复制，可以粘贴给你的 Agent。');})}><CopyIcon aria-hidden="true"/>复制 Agent 提示词</Button><details className="prompt-details"><summary>查看提示词</summary><pre>{agentPrompt(context)}</pre></details></div></div>
+    <div className="agent-step"><span className="step-number">02</span><div><h3>导入 Agent 给你的配置</h3><div className="button-row"><Button variant="outline" disabled={busy} onClick={()=>void run(async()=>{const value=await window.tokenBalance.readConfigFile();if(value!==null)change(value);})}><FolderIcon aria-hidden="true"/>选择 JSON 文件</Button><span className="field-hint">或者直接粘贴完整 JSON / JSON 代码块</span></div><Field label={<label htmlFor="agent-json">Agent 生成的配置</label>}><Textarea id="agent-json" className="code-input sample-input" value={text} onChange={e=>change(e.target.value)} placeholder={'{"format":"123token-config-v1","accounts":[…]}'} spellCheck={false}/></Field><Button variant="outline" disabled={!text.trim()||busy} onClick={()=>void run(async()=>{setPreview(await window.tokenBalance.previewConfig(text));setStatus('配置格式通过，请核对账号后添加。');})}>预览配置</Button></div></div>
+    {!!preview.length&&<div className="config-preview"><strong>将新增 {preview.length} 个账号</strong>{preview.map((a,i)=><div key={i}><span>{a.platformName} · {a.account}</span><small>{a.engine==='browser'?'网页登录':a.engine==='preset'?'内置 API':a.engine==='manual'?'手动快照':'自定义字段'} · {a.infoUrl}</small>{['bearer','api-key','cookie'].includes(a.auth)&&!a.hasSecret&&<small>添加后在本机编辑账号填写凭据。</small>}</div>)}</div>}
+    {error&&<Notice error>{error}</Notice>}{status&&<Notice>{status}</Notice>}<div className="editor-footer"><span className="field-hint">只新增账号，不覆盖已有记录。网页账号添加后需要登录。</span><div><Button variant="text" onClick={onClose} disabled={busy}>关闭</Button><Button variant="default" disabled={!preview.length||busy} onClick={()=>void run(async()=>{await window.tokenBalance.importConfig(text);onImported?.();onClose();})}>{busy?<Loader size="sm"/>:null}添加这些账号</Button></div></div>
+  </DialogContent></Dialog>;
+}

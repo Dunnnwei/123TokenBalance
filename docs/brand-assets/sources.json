@@ -1,0 +1,199 @@
+{
+  "package": "@lobehub/icons-static-svg",
+  "version": "1.95.1",
+  "repository": "https://github.com/lobehub/lobe-icons",
+  "assets": [
+    {
+      "name": "openai",
+      "variant": "mono",
+      "source": "package/icons/openai.svg",
+      "sha256": "a595df6b423920c67a7f8f73c063e4bfb72d415948097b6cac063a2366bb5186"
+    },
+    {
+      "name": "openai",
+      "variant": "color",
+      "source": "package/icons/openai.svg",
+      "sha256": "a595df6b423920c67a7f8f73c063e4bfb72d415948097b6cac063a2366bb5186"
+    },
+    {
+      "name": "claude",
+      "variant": "mono",
+      "source": "package/icons/claude.svg",
+      "sha256": "365a70a7eb3956d9b9a96086058ebe04e1dbd8e291a756ad964e8a283fbd6d38"
+    },
+    {
+      "name": "claude",
+      "variant": "color",
+      "source": "package/icons/claude-color.svg",
+      "sha256": "a3101f3047a119aa11825ad9369510f0c472428c8c52d420e31bc62db44a8364"
+    },
+    {
+      "name": "gemini",
+      "variant": "mono",
+      "source": "package/icons/gemini.svg",
+      "sha256": "87d5b3c4be75a66f54c1936482a263df68185545b741129badd1b7c2449c18d3"
+    },
+    {
+      "name": "gemini",
+      "variant": "color",
+      "source": "package/icons/gemini-color.svg",
+      "sha256": "8ab0a9bafec11f7e69bcb9fc4ffd8f1bc927d1ddcbbb6ff36dee5ae8b5a9d602"
+    },
+    {
+      "name": "deepseek",
+      "variant": "mono",
+      "source": "package/icons/deepseek.svg",
+      "sha256": "8f9443e351b6dacce71871790201b799d92e8bf96a45ef79aeb5e9bf4db423e2"
+    },
+    {
+      "name": "deepseek",
+      "variant": "color",
+      "source": "package/icons/deepseek-color.svg",
+      "sha256": "deba5f98a5c1796e20fcac3149bcd7eb8a32f0bdd04d048819400b1f28bd1439"
+    },
+    {
+      "name": "zhipu",
+      "variant": "mono",
+      "source": "package/icons/zhipu.svg",
+      "sha256": "d4c3fe5ff92820b2ae5e3ddaaa30e6fc622cb746b75baad97f4bb2428fa25c5d"
+    },
+    {
+      "name": "zhipu",
+      "variant": "color",
+      "source": "package/icons/zhipu-color.svg",
+      "sha256": "8174e65ff71647d5c705c920c953a82bd723d9e3e42887bdd4ffc9dfe51207a0"
+    },
+    {
+      "name": "zai",
+      "variant": "mono",
+      "source": "package/icons/zai.svg",
+      "sha256": "e748cb5108ce37b116d7a5ba97d37e0ae97eadf6849b0de11afb248e244a01e1"
+    },
+    {
+      "name": "zai",
+      "variant": "color",
+      "source": "package/icons/zai.svg",
+      "sha256": "e748cb5108ce37b116d7a5ba97d37e0ae97eadf6849b0de11afb248e244a01e1"
+    },
+    {
+      "name": "minimax",
+      "variant": "mono",
+      "source": "package/icons/minimax.svg",
+      "sha256": "bb96e2005081494716de6af5fd030701ae551ee68393ad61b325c07325607848"
+    },
+    {
+      "name": "minimax",
+      "variant": "color",
+      "source": "package/icons/minimax-color.svg",
+      "sha256": "7f7187fa6d9b341ac5f22f6c5a970523afb439dc45566d64eb4f4b9b604d6b01"
+    },
+    {
+      "name": "kimi",
+      "variant": "mono",
+      "source": "package/icons/kimi.svg",
+      "sha256": "ed08131b46acf70e6e2144eceb775e74098b58ea65fa21eaee04be7b05cfe63b"
+    },
+    {
+      "name": "kimi",
+      "variant": "color",
+      "source": "package/icons/kimi-color.svg",
+      "sha256": "74a7292aeb0220445d14c5d397d75760e2e8c6ed6a9e5fe4f3023471bf62a9ff"
+    },
+    {
+      "name": "moonshot",
+      "variant": "mono",
+      "source": "package/icons/moonshot.svg",
+      "sha256": "435f41b74e6a87639b6bf860e9628f20cbe7d6229bece412d548f4cea3081852"
+    },
+    {
+      "name": "moonshot",
+      "variant": "color",
+      "source": "package/icons/moonshot.svg",
+      "sha256": "435f41b74e6a87639b6bf860e9628f20cbe7d6229bece412d548f4cea3081852"
+    },
+    {
+      "name": "siliconcloud",
+      "variant": "mono",
+      "source": "package/icons/siliconcloud.svg",
+      "sha256": "50025587d401e07f7d82a2977146176bd8c9d9f52c54c452f31bb49c16d0cf3c"
+    },
+    {
+      "name": "siliconcloud",
+      "variant": "color",
+      "source": "package/icons/siliconcloud-color.svg",
+      "sha256": "a02d8d7ccb81739fbc720e2e5daaf149013dd5088605dc2dce1b71df0784d424"
+    },
+    {
+      "name": "openrouter",
+      "variant": "mono",
+      "source": "package/icons/openrouter.svg",
+      "sha256": "ae671cc83de9bd45db97a47ed5e38a4e1bd9f93a12be495ba4b4f8b284026bca"
+    },
+    {
+      "name": "openrouter",
+      "variant": "color",
+      "source": "package/icons/openrouter-color.svg",
+      "sha256": "17bede1b89166f824ee06753dc526a3f5e18b769706deaab09d04a3a98de1a78"
+    },
+    {
+      "name": "volcengine",
+      "variant": "mono",
+      "source": "package/icons/volcengine.svg",
+      "sha256": "f29d0bdc284b33d8664ef221add7fbf06a5b370ef92767fa33f6020c914d3d33"
+    },
+    {
+      "name": "volcengine",
+      "variant": "color",
+      "source": "package/icons/volcengine-color.svg",
+      "sha256": "84f9e2cd1da7e73dc6c9a0f2521745d39cae96c008752cdb1baf57a8c94393a1"
+    },
+    {
+      "name": "alibabacloud",
+      "variant": "mono",
+      "source": "package/icons/alibabacloud.svg",
+      "sha256": "7a62c43622e764c416b9069a8ce505d2560f4b4bcf71ed46bbc32d7259416c56"
+    },
+    {
+      "name": "alibabacloud",
+      "variant": "color",
+      "source": "package/icons/alibabacloud-color.svg",
+      "sha256": "73ea97baf919edb3d888a77cd45b21574e190a80124a59e199ea6953a28a959c"
+    },
+    {
+      "name": "tencent",
+      "variant": "mono",
+      "source": "package/icons/tencent.svg",
+      "sha256": "24f53f9f8195a04d0183e5ffa6b3e05e783e043d56b11ed65d066eb9211e5dc8"
+    },
+    {
+      "name": "tencent",
+      "variant": "color",
+      "source": "package/icons/tencent-color.svg",
+      "sha256": "7c370ad4b75e3f30d0fa7da71f90466a0ee95a887189479aa9df414079b50eb6"
+    },
+    {
+      "name": "cursor",
+      "variant": "mono",
+      "source": "package/icons/cursor.svg",
+      "sha256": "0cb51bddf264ae108926fd554c063ef40fc1aac3c5c921ddb39ad184e4e5d0ef"
+    },
+    {
+      "name": "cursor",
+      "variant": "color",
+      "source": "package/icons/cursor.svg",
+      "sha256": "0cb51bddf264ae108926fd554c063ef40fc1aac3c5c921ddb39ad184e4e5d0ef"
+    },
+    {
+      "name": "githubcopilot",
+      "variant": "mono",
+      "source": "package/icons/githubcopilot.svg",
+      "sha256": "bbc7fddc13448236e5edea8c399d2072dc40aa5da5bca07f7a2f412405c500a3"
+    },
+    {
+      "name": "githubcopilot",
+      "variant": "color",
+      "source": "package/icons/githubcopilot.svg",
+      "sha256": "bbc7fddc13448236e5edea8c399d2072dc40aa5da5bca07f7a2f412405c500a3"
+    }
+  ]
+}

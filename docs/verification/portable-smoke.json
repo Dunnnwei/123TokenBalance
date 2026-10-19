@@ -1,0 +1,14 @@
+{
+  "result": "passed",
+  "version": "1.1.0",
+  "executable": "D:\\DiskWork\\PJ\\123TokenBlance\\artifacts\\qa\\portable-RZllwQ\\移动后的程序 Token Balance\\123TokenBalance.exe",
+  "restrictedPath": "C:\\Windows\\System32;C:\\Windows",
+  "defaultDataBesideExe": true,
+  "initiallyEmpty": true,
+  "retainedAccountAfterMove": true,
+  "sameAccountId": true,
+  "dpapiAvailable": true,
+  "noPlaintextSecretOnDisk": true,
+  "externalNodePythonDotnetNeeded": false,
+  "realAccountOrNetworkUsed": false
+}
