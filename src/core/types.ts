@@ -33,13 +33,22 @@ export interface AccountAppearance {logo?:LogoSource;backgroundLogo?:LogoSource;
 export const LOGO_NAMES:Record<string,string>={openai:'OpenAI',claude:'Claude',gemini:'Gemini',deepseek:'DeepSeek',zhipu:'智谱',zai:'Z.ai',minimax:'MiniMax',kimi:'Kimi',moonshot:'Moonshot',siliconcloud:'硅基流动',openrouter:'OpenRouter',volcengine:'火山方舟',alibabacloud:'阿里云百炼',tencent:'腾讯云',cursor:'Cursor',githubcopilot:'GitHub Copilot'};
 export interface Settings { intervalMinutes: number; lowThreshold: number; privacy: boolean; }
 export interface StoreData { schema: 1; accounts: Account[]; settings: Settings; }
-export interface AppState extends StoreData { version: string; dataPath: string; secureStorage: boolean; warnings: string[]; }
+export interface AppState extends StoreData { version: string; dataPath: string; secureStorage: boolean; warnings: string[]; readOnly:boolean; environment:import('./system').EnvironmentReport; }
 export interface Provider {
   id: string; name: string; region: string; engine: Engine; endpoint: string; website: string;
   infoUrl: string; auth: Auth; method?: 'GET' | 'POST'; body?: string; headers?: string;
   description: string; docs: string; support: 'adapter' | 'web' | 'custom';
 }
 export interface Bridge {
+  ready(): Promise<void>;
+  environment(): Promise<import('./system').EnvironmentReport>;
+  openDiagnostics(): Promise<void>;
+  recoverData(): Promise<AppState|null>;
+  updateState(): Promise<import('./system').UpdateState>;
+  checkUpdate(): Promise<import('./system').UpdateState>;
+  downloadUpdate(): Promise<import('./system').UpdateState>;
+  installUpdate(): Promise<import('./system').UpdateState>;
+  subscribeUpdate(callback:(state:import('./system').UpdateState)=>void):()=>void;
   state(): Promise<AppState>;
   save(account: Account): Promise<AppState>;
   remove(id: string): Promise<AppState>;

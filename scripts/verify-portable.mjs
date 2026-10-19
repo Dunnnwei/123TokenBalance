@@ -20,7 +20,7 @@ for (const key of Object.keys(env)) if (key.toLowerCase() === 'path') delete env
 env.PATH = `${process.env.SystemRoot}\\System32;${process.env.SystemRoot}`;
 let application;
 async function launch(folder) {
-  application = await _electron.launch({ executablePath: path.join(folder, '123TokenBalance.exe'), args: [], cwd: folder, env });
+  application = await _electron.launch({ executablePath: path.join(folder, '123TokenBalance.App.exe'), args: [], cwd: folder, env });
   const page = await application.firstWindow();
   await page.getByRole('heading', { name: '额度总览.' }).waitFor();
   const state = await page.evaluate(() => window.tokenBalance.state());

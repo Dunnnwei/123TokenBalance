@@ -38,6 +38,20 @@ export class Repository implements RepositoryLike {
     if(envelope.version !== 1 || typeof envelope.encrypted !== 'string') throw new Error('format');
     const parsed: unknown = JSON.parse(this.codec.decrypt(Buffer.from(envelope.encrypted,'base64'))); validateStore(parsed); return parsed;
   }
+  archiveAndReset():string {
+    if(!this.readOnly)throw new AppError('data','当前配置可正常读取，无需恢复。');
+    // Prove encryption is usable before touching the protected source files.
+    this.codec.encrypt('{}');
+    const archive=fs.mkdtempSync(path.join(path.dirname(this.file),'recovery-'));
+    for(const file of [this.file,this.file+'.bak'])if(fs.existsSync(file))fs.copyFileSync(file,path.join(archive,path.basename(file)),fs.constants.COPYFILE_EXCL);
+    const localState=path.join(path.dirname(this.file),'runtime','Local State');
+    if(fs.existsSync(localState))fs.copyFileSync(localState,path.join(archive,'Local State'),fs.constants.COPYFILE_EXCL);
+    fs.writeFileSync(path.join(archive,'README.txt'),'原始加密账号与可用的浏览器密钥文件已保留。跨机恢复请在原电脑导出口令加密 .tbb 备份，再在新电脑导入。此目录含敏感加密材料，请勿上传或公开。\n');
+    this.readOnly=false;
+    try{this.commit({schema:1,accounts:[],settings:{...DEFAULT_SETTINGS}});}catch(e){this.readOnly=true;throw e;}
+    this.warnings=[`原始配置已归档到 ${archive}。现在可以导入口令加密备份，或添加新账号；网页登录需重新进行。`];
+    return archive;
+  }
   commit(next: StoreData): void {
     if(this.readOnly) throw new AppError('data','配置处于保护性只读模式，未覆盖原始文件。请查看顶部的数据恢复提示。');
     validateStore(next);

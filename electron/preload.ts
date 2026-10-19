@@ -6,6 +6,9 @@ const call = async (name:string, ...args:unknown[]) => {
   return result.value;
 };
 const bridge: Bridge = {
+  ready:()=>call('ready'),environment:()=>call('environment'),openDiagnostics:()=>call('openDiagnostics'),recoverData:()=>call('recoverData'),
+  updateState:()=>call('updateState'),checkUpdate:()=>call('checkUpdate'),downloadUpdate:()=>call('downloadUpdate'),installUpdate:()=>call('installUpdate'),
+  subscribeUpdate:callback=>{const listener=(_event:unknown,state:import('../src/core/system').UpdateState)=>callback(state);ipcRenderer.on('tb:update',listener);return()=>ipcRenderer.removeListener('tb:update',listener);},
   state:()=>call('state'),save:a=>call('save',a),remove:id=>call('remove',id),refresh:ids=>call('refresh',ids),
   login:id=>call('login',id),clearSession:id=>call('clearSession',id),open:url=>call('open',url),settings:s=>call('settings',s),
   preview:(a,s)=>call('preview',a,s),test:a=>call('test',a),exportBackup:p=>call('exportBackup',p),importBackup:p=>call('importBackup',p),
