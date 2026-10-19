@@ -13,7 +13,7 @@ export function resolveDataPath(root:string,override:string|undefined,local:stri
   const requested=override?path.resolve(override):path.join(root,'data');
   if(probeWritable(requested))return{dataPath:requested,fallback:false};
   if(override)throw new Error('指定的数据目录不可写，请选择当前用户可写目录。');
-  const fallback=path.join(local,'123TokenBalance',`portable-${createHash('sha256').update(root.toLowerCase()).digest('hex').slice(0,16)}`);
+  const fallback=path.join(local,'123TokenBalance',`portable-${createHash('sha256').update(root).digest('hex').slice(0,16)}`);
   if(!probeWritable(fallback))throw new Error('程序文件夹和用户数据目录均不可写。');
   return{dataPath:fallback,fallback:true};
 }

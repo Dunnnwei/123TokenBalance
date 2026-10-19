@@ -1,0 +1,18 @@
+{
+  "version": "1.2.0",
+  "startedAt": "2026-10-19T07:55:34.994Z",
+  "cases": [
+    "native preflight with restricted PATH",
+    "missing runtime file gives actionable diagnostic",
+    "damaged runtime size detected",
+    "real native launcher to Electron UI handshake, Chinese path, different working directory",
+    "native installation switches directories and retains previous full program",
+    "encrypted account, stable UUID and credential survive native update",
+    "invalid new runtime triggers rollback with original encrypted data intact",
+    "no-window no-ready child times out; owned process tree released and original app/data restored",
+    "simulated foreign DPAPI browser state archived; original accounts preserved and recovery UI opens"
+  ],
+  "base": "D:\\DiskWork\\PJ\\123TokenBlance\\artifacts\\qa\\native-lifecycle-qiZfT3",
+  "result": "passed",
+  "finishedAt": "2026-10-19T07:56:51.482Z"
+}

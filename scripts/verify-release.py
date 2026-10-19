@@ -35,7 +35,7 @@ def manifest(text):
 assert folder.is_dir() and archive_path.is_file()
 assert not (folder / 'data').exists()
 assert not (folder / 'node_modules').exists()
-required = ['123TokenBalance.exe', 'resources/app.asar', 'VERSION.txt', 'README.md', 'docs/QA_REPORT.md', 'licenses/dependencies.json', 'LICENSES.chromium.html']
+required = ['123TokenBalance.exe', '123TokenBalance.App.exe', 'runtime-files.txt', 'resources/app.asar', 'VERSION.txt', 'README.md', 'docs/QA_REPORT.md', f'docs/CODE_REVIEW-{version}.md', 'licenses/dependencies.json', 'LICENSES.chromium.html']
 assert all((folder / file).is_file() for file in required)
 assert (folder / 'VERSION.txt').read_text(encoding='utf-8').splitlines()[0] == version
 files = {p.relative_to(folder).as_posix(): p for p in folder.rglob('*') if p.is_file()}

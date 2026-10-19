@@ -43,5 +43,5 @@ execFileSync('python',[path.join(root,'scripts/zip-release.py'),out,zip],{stdio:
 const externalHashes=`${sha(zip)}  ${path.basename(zip)}\n${sha(path.join(out,'123TokenBalance.exe'))}  ${name}/123TokenBalance.exe\n`;
 fs.writeFileSync(path.join(base,'SHA256SUMS.txt'),externalHashes);
 fs.writeFileSync(path.join(base,`SHA256SUMS-${pkg.version}.txt`),externalHashes);
-fs.writeFileSync(path.join(base,'发布说明.txt'),`123 Token Balance ${pkg.version}\n\n上传包：${name}.zip\n便携程序：${name}/123TokenBalance.exe\n请完整解压后运行，保持程序文件夹完整。不要上传自己的 data 文件夹。\n验证与限制详见程序目录 docs/QA_REPORT.md。\n签名：本版本 EXE 未签名。\n`);
+fs.writeFileSync(path.join(base,'发布说明.txt'),`123 Token Balance ${pkg.version}\n\n上传包：${name}.zip\n便携程序：${name}/123TokenBalance.exe\n请完整解压后运行 123TokenBalance.exe，启动器将显示环境检测。123TokenBalance.App.exe 是内部主体。\n请保持程序文件夹完整，不要只复制 EXE。不要上传自己的 data 文件夹。\nGitHub：https://github.com/Dunnnwei/123TokenBalance\n最新版本：https://github.com/Dunnnwei/123TokenBalance/releases/latest\n验证与限制详见程序目录 docs/QA_REPORT.md。\n签名：本版本 EXE 未签名。\n`);
 console.log(JSON.stringify({directory:out,zip,zipBytes:fs.statSync(zip).size,zipSha256:sha(zip),files:entries.length+1},null,2));

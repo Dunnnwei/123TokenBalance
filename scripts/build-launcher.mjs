@@ -19,8 +19,16 @@ fs.writeFileSync(rc,`#pragma code_page(65001)\n#include <windows.h>\n1 ICON "${p
 const batch=path.join(temp,'build.cmd');
 fs.writeFileSync(batch,`@echo off\r\ncall "${vcvars}" >nul\r\nif errorlevel 1 exit /b 1\r\nrc /nologo /fo "${temp}\\launcher.res" "${rc}"\r\nif errorlevel 1 exit /b 1\r\ncl /nologo /std:c++17 /utf-8 /EHsc /O2 /MT /W4 /DWIN32_LEAN_AND_MEAN /DNOMINMAX "${root}\\native\\launcher.cpp" "${temp}\\launcher.res" /Fo"${temp}\\launcher.obj" /Fe"${temp}\\123TokenBalance.exe" /link /SUBSYSTEM:WINDOWS /DYNAMICBASE /NXCOMPAT /MANIFEST:EMBED /MANIFESTINPUT:"${root}\\native\\launcher.manifest"\r\nexit /b %errorlevel%\r\n`);
 execFileSync(process.env.ComSpec??'cmd.exe',['/d','/c',batch],{stdio:'inherit',cwd:root});
+if(process.argv.includes('--fixtures')){
+  const testBatch=path.join(temp,'fixture.cmd');
+  fs.writeFileSync(testBatch,`@echo off\r\ncall "${vcvars}" >nul\r\ncl /nologo /MT /O2 "${root}\\tests\\fixtures\\no-ready.cpp" /Fo"${temp}\\no-ready.obj" /Fe"${temp}\\no-ready.exe" /link /SUBSYSTEM:WINDOWS\r\nexit /b %errorlevel%\r\n`);
+  execFileSync(process.env.ComSpec??'cmd.exe',['/d','/c',testBatch],{stdio:'inherit',cwd:root});
+}
 const original=path.join(out,'123TokenBalance.exe'),app=path.join(out,'123TokenBalance.App.exe');
-if(!fs.existsSync(app))fs.renameSync(original,app);
+// Refresh the Electron executable after every builder run; never retain stale
+// embedded ASAR integrity metadata from an older package.
+if(fs.statSync(original).size>10*1024*1024)fs.copyFileSync(original,app);
+else if(!fs.existsSync(app))throw new Error('Missing Electron application executable.');
 fs.copyFileSync(path.join(temp,'123TokenBalance.exe'),original);
 function files(dir){return fs.readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?files(path.join(dir,e.name)):[path.join(dir,e.name)]);}
 const runtime=files(out).filter(p=>!p.endsWith('runtime-files.txt')&&!p.endsWith('SHA256SUMS.txt')).sort();

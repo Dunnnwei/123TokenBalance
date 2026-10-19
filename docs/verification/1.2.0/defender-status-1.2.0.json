@@ -1,0 +1,8 @@
+{
+  "AMServiceEnabled": true,
+  "AntivirusEnabled": true,
+  "RealTimeProtectionEnabled": true,
+  "AMEngineVersion": "1.1.26090.9",
+  "AntivirusSignatureVersion": "1.461.100.0",
+  "AntivirusSignatureLastUpdated": "2026-10-19T08:24:54+08:00"
+}

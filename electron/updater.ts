@@ -43,7 +43,8 @@ export class Updater {
     return e instanceof Error?e.message.slice(0,500):'更新失败，原程序和数据未修改。';
   }
   async download():Promise<UpdateState>{
-    if(this.busy)return this.state;if(this.prepared)return this.state;
+    if(this.busy)return this.state;
+    if(this.prepared)return this.set({phase:'ready',message:'已校验的更新包仍可用，正在重试应用更新。'});
     const candidate=this.state.candidate;if(!candidate)return this.set({phase:'error',message:'请先检测新版本。'});
     this.busy=true;let stage='',downloadDir='';
     try{

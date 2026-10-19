@@ -1,18 +1,46 @@
 # 123 Token Balance
 
-中文、多账号 AI 订阅额度与 API 余额工作台。版本 **1.1.0**，发布目标 Windows 10/11 x64，界面直接使用本地 HAUI 0.1.0 组件与主题。
+中文、多账号 AI 订阅额度与 API 余额工作台。版本 **1.2.0**，发布目标 Windows 10/11 x64，界面直接使用本地 HAUI 0.1.0 组件与主题。
 
 ## 启动
 
-1. 完整解压 `123TokenBalance-1.1.0-win-x64.zip`。
-2. 进入同名文件夹，双击 `123TokenBalance.exe`。
+1. 完整解压 `123TokenBalance-1.2.0-win-x64.zip`。
+2. 进入同名文件夹，双击 `123TokenBalance.exe`。原生检测窗口立即显示检查结果，通过后自动打开工作台。`123TokenBalance.App.exe` 是内部主体，请使用前者启动。
 3. 点击「网页快速添加」，粘贴能看到订阅或余额的信息页网址。
 4. 在独立窗口完成官方登录，打开用量页后点击顶部「一键抓取」。
 5. 核对识别预览，补充账号名或套餐名，点击「保存并添加账号」。
 
 已经有 API Key 时可以用「添加账号」选择模板。不会配置时点击「Agent 帮助 → 复制 Agent 提示词」，把提示词交给你自己的 Agent；它生成的 JSON 配置可在本工具预览并导入。
 
-不需要安装 Node、Python、.NET 或额外浏览器运行时。所有 DLL、resources、locales 都是程序的一部分，**请整体移动文件夹，不要只拷贝 EXE**。将文件夹放在当前用户可写的位置。首次启动创建 `data/`，发布包没有任何真实账号或示例账号数据。
+不需要安装 Node、Python、.NET 或额外浏览器运行时。所有 DLL、resources、locales 都是程序的一部分，**请整体移动文件夹，不要只拷贝 EXE**。建议将文件夹放在当前用户可写的位置。默认首次启动创建 `data/`；不可写时自动使用当前用户 LocalAppData 中的独立目录，界面会显示实际位置，发布包没有任何真实账号或示例账号数据。
+
+## 1.2.0 启动检测与换机
+
+- 原生 Win32 启动器静态链接，不依赖 Node、Python、.NET、WebView2 或 VC Redistributable。程序主体内置 Electron/Chromium。
+- 每次启动快速检查 Windows 版本、架构、运行文件及尺寸、数据目录、浏览器加密配置与媒体组件；满足条件标记通过，不满足时给出需求或官方链接。
+- 推荐 Windows 11 x64；系统最低检查阈值 Windows 10 build 19041。ARM64 依赖系统的 x64 模拟支持，未在 ARM64 实机验收。
+- 默认使用软件渲染降低跨显卡启动风险。主窗口立即显示；若 45 秒内未完成界面就绪，启动器显示错误并释放**本次创建的进程树**，不结束其他应用。
+- 跨机不可用的 Chromium 加密配置归档到 `data/runtime-unreadable-*`，保留原账号文件；在「环境检测 → 归档旧配置并恢复」完整保留旧配置后，导入原电脑导出的 `.tbb` 口令备份。网页登录需要重新进行。
+- 侧栏「环境检测通过 / 有提示」可查看详细项目；「打开检测日志」进入 `%LOCALAPPDATA%/123TokenBalance/logs`。主进程日志位于实际数据目录 `logs/startup.log`。
+- 只做检测可运行 `123TokenBalance.exe --diagnose`。`--data-dir=绝对路径` 可指定数据位置；明确指定但不可写时会报错，不悄悄改用其他目录。
+
+完整文件和正确系统环境是启动前提。如果 Windows 安全策略在程序执行前就阻止了 EXE，本程序无法显示自己的诊断；请核对发布来源、文件哈希和 Windows 安全中心的具体记录，无需关闭安全防护。
+
+官方环境说明：[Windows 11](https://www.microsoft.com/software-download/windows11)、[Windows N 媒体功能包](https://support.microsoft.com/windows/media-feature-pack-for-windows-n-8622b390-4ce6-43c9-9b42-549e5328e407)。媒体功能包缺失只提示，不阻止额度工作台启动。
+
+## 检测与自动更新
+
+仓库：[Dunnnwei/123TokenBalance](https://github.com/Dunnnwei/123TokenBalance) · [下载最新发布包](https://github.com/Dunnnwei/123TokenBalance/releases/latest)。
+
+1. 点击窗口右上角「检测新版本」。仅查询该公开仓库的正式 Release，不需要 GitHub token。
+2. 有新版本时点击「下载并自动更新」。程序显示下载进度，验证 GitHub SHA-256 摘要、安全解压和包内全部文件校验和。
+3. 校验完成后自动重启并切换新版。旧版保留为同级 `.backup-*` 文件夹，原 `data` 移入新版；外部数据目录沿用原路径。
+4. 新版启动检查失败时自动尝试回滚；两份程序均保留。文件被其他程序持续占用时会保留备份并给出手动恢复路径，不强制结束其他副本。
+5. 网络失败、GitHub 限流、摘要不匹配或解压验证失败时继续使用当前版，也可点击「在 GitHub 下载」自行下载。
+
+更新需要约 1.8 GB 可用磁盘空间和程序父目录的写入权限。UNC 网络路径、链接目录或非标准的内部自定义数据位置请使用手动更新。更新辅助程序只在应用更新期间运行，完成即退出。旧版备份保留供核对，确认新版本与数据正常后可自行整理。
+
+自动更新首发于 1.2.0，因此从 1.0.0/1.1.0 首次升级请下载完整 ZIP，按下方迁移方法使用。后续新版会由 1.2.0 的检查按钮发现。
 
 ## 功能
 
@@ -39,14 +67,14 @@
 - **日期**：在「编辑账号 → 订阅日期」填写。月/年周期可给出建议续费日，仍可修改；续费后手动更新日期。提醒只在应用内显示，关闭程序不会后台通知或自动续费。
 - **排序与直达**：总览点击「调整顺序」后上下移动。每行的直达按钮和 Alt+O 打开保存的信息页，重置等操作由你在官方页面手动完成。
 
-## 从 1.0.0 升级
+## 从 1.0.0 / 1.1.0 升级
 
 1. 先在旧版导出口令加密备份，并关闭旧版和新版。
 2. 解压新版到新的文件夹，保留旧版目录。
 3. 在同一电脑、同一 Windows 用户下，将旧版完整 `data` 文件夹复制到新版 EXE 旁，再启动新版。不要同时运行两个副本修改同一份数据。
 4. 若新版已添加数据，先导出其备份，再决定使用哪份 `data`，不要直接覆盖唯一副本。换电脑或 Windows 用户时使用口令备份导入，并重新网页登录。
 
-本版沿用 schema 1 加密格式，已使用旧版 EXE 创建的隔离测试数据验证 UUID、密钥和请求头兼容。发布包不包含、也不会自动移动你的真实账号数据。
+本版沿用 schema 1 加密格式，已使用旧版 EXE 创建的隔离测试数据验证 UUID、密钥和请求头兼容。原 `data/runtime/Local State` 含账号解密所需密钥，因此请复制**完整 data**，不要只复制 accounts.enc.json。发布包不包含、也不会自动移动你的真实账号数据。
 
 ## 平台覆盖与真实边界
 
@@ -66,7 +94,7 @@
 
 - 账号、API Key、手动 Cookie、附加请求头及快照保存为 `data/accounts.enc.json`，使用当前 Windows 用户的加密服务（DPAPI）保护；`.bak` 为上一份加密备份。
 - `data/runtime/` 包含应用主题与各账号独立的浏览器会话。
-- 同一电脑、同一 Windows 用户下可以整体移动文件夹。换电脑或 Windows 用户时先在旧电脑导出口令备份，在新电脑导入；网页登录需重新进行。
+- 同一电脑、同一 Windows 用户下可以整体移动程序与完整 data 文件夹。换电脑或 Windows 用户时先在旧电脑导出口令备份，在新电脑导入；网页登录需重新进行。
 - 口令备份 `.tbb` 使用 scrypt + AES-256-GCM，包含 API 凭据，不含浏览器 Cookie 数据库。口令至少 10 个字符。
 - 导入新增账号，不覆盖现有账号。API 快照清空并重新查询；手动快照保留原始采集时间。
 - CSV 含账号标识和额度，不含密钥或请求头。分享程序前请勿包含自己的 `data/`。
@@ -74,7 +102,7 @@
 
 ## 杀毒软件与签名
 
-本版使用普通 Electron 程序目录发布，无 UPX、混淆壳、自解压启动器、管理员提权、驱动、进程注入、开机自启或后台服务。关闭主窗口即退出程序。
+本版使用静态原生 Win32 启动器和普通 Electron 程序目录发布，无 UPX、混淆壳、自解压启动器、管理员提权、驱动、进程注入、开机自启或后台服务。关闭主窗口即退出程序；仅在明确应用更新时，辅助进程完成切换后退出。
 
 本版没有发行者代码签名证书，EXE 未签名。上述措施降低常见误报因素，但无法保证所有杀软零误报或消除 Windows SmartScreen 的信誉提示。请核对发布哈希；不要关闭系统防护或添加全局排除。具体扫描结果及未执行的验证见 `docs/QA_REPORT.md`。
 
@@ -86,12 +114,18 @@ node node_modules/electron/install.js  # 仅当 npm 配置禁用了安装脚本�
 npm run build
 npm test
 npm run test:e2e
-npm run package
+npm run package  # 构建原生启动器需 Visual Studio Build Tools C++ 和 Windows SDK
+node scripts/build-launcher.mjs --fixtures  # 仅生成本地故障测试夹具
+node scripts/verify-startup-update.mjs
+node scripts/verify-portable.mjs
 npm run release
+python scripts/verify-release.py
 ```
 
-`vendor/haui-0.1.0.tgz` 来自 `D:\DiskWork\PJ\HAUI\packages\haui`，不依赖在线发布的 HAUI 包。依赖精确版本在 package-lock.json 中。`npm run release` 只从构建产物准备发布目录并生成 ZIP，不会包含开发数据。发布前请参照 `docs/IMPLEMENTATION_PLAN-1.1.0.md` 的验收矩阵。
+`vendor/haui-0.1.0.tgz` 来自 `D:\DiskWork\PJ\HAUI\packages\haui`，不依赖在线发布的 HAUI 包。依赖精确版本在 package-lock.json 中。`npm run release` 只从构建产物准备发布目录并生成 ZIP，不会包含开发数据。发布前请参照 `docs/IMPLEMENTATION_PLAN-1.2.0.md` 的验收矩阵。
 
-默认数据目录为 EXE 旁的 data；如要隔离测试数据，可用 `123TokenBalance.exe --data-dir=D:\YourFolder\TestData` 启动，目录需可写。
+默认数据目录为 EXE 旁的 data，不可写时见界面的实际路径；如要隔离测试数据，可用 `123TokenBalance.exe --data-dir=D:\YourFolder\TestData` 启动，目录需可写。
 
 MIT License。第三方许可证位于发布包 `licenses/`、`LICENSE.electron.txt` 和 `LICENSES.chromium.html`。品牌图标的来源与许可在 `docs/brand-assets/`，相关商标属于各自权利人。
+
+安全和实现依据：[Electron safeStorage 的 Windows 加密边界](https://www.electronjs.org/docs/latest/api/safe-storage)、[GitHub Release 资产与 SHA-256](https://docs.github.com/en/rest/releases/assets)。本程序从不将发布凭据嵌入客户端。

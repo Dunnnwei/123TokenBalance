@@ -53,7 +53,29 @@ bool writable(const f::path& p){try{f::create_directories(p);f::path q=p/(L".wri
 std::string read(const f::path& p,size_t limit=1024*1024){if(f::file_size(p)>limit)throw std::runtime_error("File exceeds limit");std::ifstream s(p,std::ios::binary);return {std::istreambuf_iterator<char>(s),{}};}
 std::string sha(const f::path& p){BCRYPT_ALG_HANDLE a=nullptr;BCRYPT_HASH_HANDLE h=nullptr;if(BCryptOpenAlgorithmProvider(&a,BCRYPT_SHA256_ALGORITHM,nullptr,0)<0)throw std::runtime_error("SHA-256 unavailable");if(BCryptCreateHash(a,&h,nullptr,0,nullptr,0,0)<0){BCryptCloseAlgorithmProvider(a,0);throw std::runtime_error("SHA-256 init failed");}std::ifstream in(p,std::ios::binary);char buf[65536];bool good=!!in;while(in){in.read(buf,sizeof(buf));auto n=in.gcount();if(n&&BCryptHashData(h,(PUCHAR)buf,(ULONG)n,0)<0){good=false;break;}}unsigned char d[32];if(in.bad()||BCryptFinishHash(h,d,32,0)<0)good=false;BCryptDestroyHash(h);BCryptCloseAlgorithmProvider(a,0);if(!good)throw std::runtime_error("SHA-256 read failed");std::string r;const char* hex="0123456789abcdef";for(auto x:d){r+=hex[x>>4];r+=hex[x&15];}return r;}
 std::wstring quote(const std::wstring& s){std::wstring r=L"\"";size_t slash=0;for(wchar_t c:s){if(c==L'\\'){slash++;continue;}if(c==L'"'){r.append(slash*2+1,L'\\');r+=c;}else{r.append(slash,L'\\');r+=c;}slash=0;}r.append(slash*2,L'\\');return r+L"\"";}
-PROCESS_INFORMATION launch(const f::path& exe,const std::vector<std::wstring>& args){std::wstring cmd=quote(exe.wstring());for(auto& a:args)cmd+=L" "+quote(a);STARTUPINFOW si{};si.cb=sizeof(si);PROCESS_INFORMATION pi{};if(!CreateProcessW(exe.c_str(),cmd.data(),nullptr,nullptr,FALSE,0,nullptr,exe.parent_path().c_str(),&si,&pi))throw std::runtime_error("CreateProcess error "+std::to_string(GetLastError()));CloseHandle(pi.hThread);return pi;}
+PROCESS_INFORMATION launch(const f::path& exe,const std::vector<std::wstring>& args,HANDLE* startupJob=nullptr){
+  std::wstring cmd=quote(exe.wstring());for(auto& a:args)cmd+=L" "+quote(a);
+  STARTUPINFOW si{};si.cb=sizeof(si);PROCESS_INFORMATION pi{};
+  if(!CreateProcessW(exe.c_str(),cmd.data(),nullptr,nullptr,FALSE,startupJob?CREATE_SUSPENDED:0,nullptr,exe.parent_path().c_str(),&si,&pi))throw std::runtime_error("CreateProcess error "+std::to_string(GetLastError()));
+  if(startupJob){
+    // Own only this newly created process tree. No process enumeration or access
+    // to unrelated applications is needed to recover a pre-window startup hang.
+    *startupJob=CreateJobObjectW(nullptr,nullptr);
+    if(!*startupJob||!AssignProcessToJobObject(*startupJob,pi.hProcess)){
+      TerminateProcess(pi.hProcess,1);CloseHandle(pi.hThread);CloseHandle(pi.hProcess);
+      if(*startupJob)CloseHandle(*startupJob);*startupJob=nullptr;throw std::runtime_error("Cannot supervise startup process");
+    }
+    ResumeThread(pi.hThread);
+  }
+  CloseHandle(pi.hThread);return pi;
+}
+std::wstring fallbackKey(const std::wstring& root){
+  auto bytes=utf8(root);BCRYPT_ALG_HANDLE algorithm=nullptr;unsigned char digest[32];
+  if(BCryptOpenAlgorithmProvider(&algorithm,BCRYPT_SHA256_ALGORITHM,nullptr,0)<0)throw std::runtime_error("SHA-256 unavailable");
+  auto result=BCryptHash(algorithm,nullptr,0,(PUCHAR)bytes.data(),(ULONG)bytes.size(),digest,32);
+  BCryptCloseAlgorithmProvider(algorithm,0);if(result<0)throw std::runtime_error("SHA-256 failed");
+  std::wstring key;const wchar_t* hex=L"0123456789abcdef";for(int i=0;i<8;i++){key+=hex[digest[i]>>4];key+=hex[digest[i]&15];}return key;
+}
 bool safeRelative(const std::wstring& s){if(s.empty()||s.front()==L'/'||s.front()==L'\\'||s.find_first_of(L":\\\t\r\n")!=std::wstring::npos)return false;f::path p(s);for(auto& part:p){std::wstring v=part.wstring();if(v==L"."||v==L".."||v.empty()||v.back()==L'.'||v.back()==L' ')return false;std::wstring lower=v;std::transform(lower.begin(),lower.end(),lower.begin(),towlower);if(lower==L"data"||lower==L".git"||lower==L"node_modules")return false;}return true;}
 bool noLinks(f::path p){for(;!p.empty();){DWORD a=GetFileAttributesW(p.c_str());if(a!=INVALID_FILE_ATTRIBUTES&&(a&FILE_ATTRIBUTE_REPARSE_POINT))return false;auto parent=p.parent_path();if(parent==p)break;p=parent;}return true;}
 bool runtimeFiles(const f::path& root){const wchar_t* required[]={L"123TokenBalance.App.exe",L"resources\\app.asar",L"icudtl.dat",L"ffmpeg.dll",L"resources.pak",L"v8_context_snapshot.bin",L"locales\\zh-CN.pak",L"runtime-files.txt"};for(auto n:required)if(!file(root/n)){record(L"fail",L"runtime",L"程序文件完整性",L"缺少 "+std::wstring(n),releases);return false;}
@@ -112,7 +134,7 @@ int WINAPI wWinMain(HINSTANCE,HINSTANCE,PWSTR,int){
     record(L"pass",L"os",L"操作系统",L"Windows build "+std::to_wstring(os.dwBuildNumber)+(si.wProcessorArchitecture==PROCESSOR_ARCHITECTURE_ARM64?L" · ARM64 / x64 模拟":L" · x64"),L"https://www.microsoft.com/software-download/windows11");
     if(!runtimeFiles(root))return finishError(L"发布目录不完整或文件损坏，不能启动主体。请完整解压 ZIP，勿只拷贝 EXE。");
     f::path data=root/L"data";bool explicitData=false;for(auto& a:args)if(a.rfind(L"--data-dir=",0)==0){data=f::absolute(a.substr(11));explicitData=true;}
-    if(!writable(data)){if(explicitData)return finishError(L"指定数据目录不可写："+data.wstring());auto key=std::hash<std::wstring>{}(root.wstring());data=f::path(localBase())/(L"portable-"+std::to_wstring(key));if(!writable(data))return finishError(L"程序目录与用户数据目录均不可写。");record(L"warn",L"data",L"数据目录",L"已使用当前用户目录："+data.wstring());}else record(L"pass",L"data",L"数据目录",data.wstring());
+    if(!writable(data)){if(explicitData)return finishError(L"指定数据目录不可写："+data.wstring());data=f::path(localBase())/(L"portable-"+fallbackKey(root.wstring()));if(!writable(data))return finishError(L"程序目录与用户数据目录均不可写。");record(L"warn",L"data",L"数据目录",L"已使用当前用户目录："+data.wstring());}else record(L"pass",L"data",L"数据目录",data.wstring());
     browserKey(data);
     wchar_t system[32768];GetSystemDirectoryW(system,32768);bool media=file(f::path(system)/L"MFPlat.dll");record(media?L"pass":L"warn",L"media",L"Windows 媒体组件",media?L"已安装":L"Windows N/KN 可安装 Media Feature Pack；不阻止额度工作台启动",L"https://support.microsoft.com/windows/media-feature-pack-for-windows-n-8622b390-4ce6-43c9-9b42-549e5328e407");
     record(L"pass",L"runtime-deps",L"运行环境",L"内置运行时，无需安装 Node、Python、.NET、WebView2 或 VC 运行库");
@@ -123,12 +145,15 @@ int WINAPI wWinMain(HINSTANCE,HINSTANCE,PWSTR,int){
     if(health)forwarded.push_back(L"--update-healthcheck");
     // A developer shell can inherit this flag; never let it turn the GUI into Node.
     SetEnvironmentVariableW(L"ELECTRON_RUN_AS_NODE",nullptr);
-    line(L"环境检测完成，正在打开工作台（最长等待 45 秒）…");auto pi=launch(root/L"123TokenBalance.App.exe",forwarded);DWORD exitCode=STILL_ACTIVE;
-    ULONGLONG start=GetTickCount64();while(GetTickCount64()-start<45000){pump();if(file(ready)){f::remove(ready,ignored);CloseHandle(pi.hProcess);return 0;}GetExitCodeProcess(pi.hProcess,&exitCode);if(exitCode!=STILL_ACTIVE)break;Sleep(50);}
+    line(L"环境检测完成，正在打开工作台（最长等待 45 秒）…");HANDLE startupJob=nullptr;auto pi=launch(root/L"123TokenBalance.App.exe",forwarded,&startupJob);DWORD exitCode=STILL_ACTIVE;
+    ULONGLONG start=GetTickCount64();while(GetTickCount64()-start<45000){pump();if(file(ready)){f::remove(ready,ignored);CloseHandle(startupJob);CloseHandle(pi.hProcess);return 0;}GetExitCodeProcess(pi.hProcess,&exitCode);if(exitCode!=STILL_ACTIVE)break;Sleep(50);}
     if(exitCode==STILL_ACTIVE){ // Only the child process started by this launcher is asked to close.
       EnumWindows([](HWND h,LPARAM p)->BOOL{DWORD id;GetWindowThreadProcessId(h,&id);if(id==(DWORD)p)PostMessageW(h,WM_CLOSE,0,0);return TRUE;},pi.dwProcessId);
       WaitForSingleObject(pi.hProcess,5000);
     }
+    // Startup failed: stop only the tree this launcher just created. This also
+    // releases child file handles so a failed update can roll back safely.
+    if(startupJob){TerminateJobObject(startupJob,1);WaitForSingleObject(pi.hProcess,5000);CloseHandle(startupJob);}
     CloseHandle(pi.hProcess);return finishError(L"主体未完成启动。进程退出码："+std::to_wstring(exitCode)+L"。请查看 data/logs/startup.log 和此检测报告；可能为系统策略拦截、文件损坏或渲染进程异常。");
   }catch(const std::exception& e){if(!headless&&!windowHandle)show();return finishError(L"启动异常："+wide(e.what()));}catch(...){if(!headless&&!windowHandle)show();return finishError(L"启动时发生未识别异常。");}
 }

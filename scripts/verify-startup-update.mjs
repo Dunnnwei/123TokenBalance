@@ -48,6 +48,16 @@ try{
   const closeHelper=processRun(path.join(process.env.SystemRoot,'System32/WindowsPowerShell/v1.0/powershell.exe'),['-NoProfile','-File',closeScript,'-Executable',helper]);assert.equal(await bounded(closeHelper.done,15000),0);assert.equal(await bounded(rollback.done,15000),1);
   const closeRestored=processRun(path.join(process.env.SystemRoot,'System32/WindowsPowerShell/v1.0/powershell.exe'),['-NoProfile','-File',closeScript,'-Executable',path.join(target,'123TokenBalance.App.exe')]);assert.equal(await bounded(closeRestored.done,15000),0);await delay(700);
   ui=await start();state=await ui.page.evaluate(()=>window.tokenBalance.state());assert.equal(state.accounts[0].id,account.id);await close(ui);ui=null;report.cases.push('invalid new runtime triggers rollback with original encrypted data intact');
+  const hangStage=fs.mkdtempSync(path.join(base,'.123TokenBalance-update-'));fs.cpSync(source,hangStage,{recursive:true});
+  const hanging=path.resolve('artifacts/native/no-ready.exe');assert(fs.existsSync(hanging),'Build the no-ready fixture with node scripts/build-launcher.mjs --fixtures');
+  fs.copyFileSync(hanging,path.join(hangStage,'123TokenBalance.App.exe'));
+  const runtimeFile=path.join(hangStage,'runtime-files.txt');fs.writeFileSync(runtimeFile,fs.readFileSync(runtimeFile,'utf8').replace(/^\d+\t123TokenBalance.App.exe$/m,`${fs.statSync(hanging).size}\t123TokenBalance.App.exe`));
+  const hangDigest=await markStage(hangStage),failedBefore=fs.readdirSync(base).filter(n=>n.includes('.failed-')).length;
+  const hangInstall=processRun(helper,['--apply-update',target,hangStage,'4294967294',data,hangDigest]);
+  await poll(()=>fs.readdirSync(base).filter(n=>n.includes('.failed-')).length>failedBefore,65000);
+  const closeHangHelper=processRun(path.join(process.env.SystemRoot,'System32/WindowsPowerShell/v1.0/powershell.exe'),['-NoProfile','-File',closeScript,'-Executable',helper]);await bounded(closeHangHelper.done,15000);assert.equal(await bounded(hangInstall.done,15000),1);
+  const closeHangRestored=processRun(path.join(process.env.SystemRoot,'System32/WindowsPowerShell/v1.0/powershell.exe'),['-NoProfile','-File',closeScript,'-Executable',path.join(target,'123TokenBalance.App.exe')]);await bounded(closeHangRestored.done,15000);await delay(700);
+  ui=await start();state=await ui.page.evaluate(()=>window.tokenBalance.state());assert.equal(state.accounts[0].id,account.id);await close(ui);ui=null;report.cases.push('no-window no-ready child times out; owned process tree released and original app/data restored');
   // A foreign-machine DPAPI Local State fixture must be archived before Chromium starts.
   fs.writeFileSync(path.join(data,'runtime','Local State'),JSON.stringify({os_crypt:{encrypted_key:Buffer.from('DPAPIforeign-machine-invalid-key').toString('base64')}}));
   const foreign=await diagnostic('foreign-key');assert.equal(foreign.code,0);assert(foreign.text.includes('跨机浏览器配置'));assert(fs.readdirSync(data).some(n=>n.startsWith('runtime-unreadable-')));

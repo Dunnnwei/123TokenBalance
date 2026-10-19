@@ -66,7 +66,7 @@ try {
   assert.equal(moved.state.accounts[0].account, 'portable-qa@example.invalid');
   assert.equal(moved.state.accounts[0].hasSecret, true);
   assert.equal(moved.state.settings.intervalMinutes, 0);
-  const report = { result: 'passed', version: moved.state.version, executable: path.join(after, '123TokenBalance.exe'), restrictedPath: env.PATH, defaultDataBesideExe: true, initiallyEmpty: true, retainedAccountAfterMove: true, sameAccountId: true, dpapiAvailable: true, noPlaintextSecretOnDisk: true, externalNodePythonDotnetNeeded: false, realAccountOrNetworkUsed: false };
+  const report = { result: 'passed', version: moved.state.version, executable: path.join(after, '123TokenBalance.App.exe'), restrictedPath: env.PATH, defaultDataBesideExe: true, initiallyEmpty: true, retainedAccountAfterMove: true, sameAccountId: true, dpapiAvailable: true, noPlaintextSecretOnDisk: true, externalNodePythonDotnetNeeded: false, realAccountOrNetworkUsed: false };
   fs.writeFileSync(path.join(qa, 'portable-smoke.json'), JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report, null, 2));
 } finally {

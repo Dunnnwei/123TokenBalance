@@ -1,0 +1,20 @@
+{
+  "123TokenBalance.exe": [
+    "USER32.dll",
+    "GDI32.dll",
+    "SHELL32.dll",
+    "ole32.dll",
+    "CRYPT32.dll",
+    "bcrypt.dll",
+    "KERNEL32.dll"
+  ],
+  "123TokenBalance.App.exe": [
+    "VERSION.dll",
+    "WINMM.dll",
+    "WS2_32.dll",
+    "KERNEL32.dll",
+    "ntdll.dll",
+    "CRYPT32.dll",
+    "DWrite.dll"
+  ]
+}
