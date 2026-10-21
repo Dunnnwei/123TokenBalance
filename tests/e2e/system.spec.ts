@@ -3,6 +3,9 @@ import { _electron,type ElectronApplication,type Page } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
 import { REPOSITORY } from '../../src/core/system';
+import {createPackage} from '@electron/asar';
+import {createHash} from 'node:crypto';
+import {releaseFixture} from '../fixtures/zip';
 let app:ElectronApplication,page:Page,dataDir:string;
 test.beforeEach(async()=>{dataDir=fs.mkdtempSync(path.resolve('artifacts/qa/system-data-'));const env={...process.env};delete env.ELECTRON_RUN_AS_NODE;app=await _electron.launch({executablePath:process.env.TB_EXECUTABLE||path.resolve('node_modules/electron/dist/electron.exe'),args:[...(process.env.TB_EXECUTABLE?[]:[path.resolve('.')]),`--data-dir=${dataDir}`],env:env as Record<string,string>});page=await app.firstWindow();await expect(page.getByRole('heading',{name:'额度总览.'})).toBeVisible();});
 test.afterEach(async()=>{await app?.close();});
@@ -10,19 +13,25 @@ const metadata=(version:string)=>({draft:false,prerelease:false,tag_name:`v${ver
 test('environment is inspected on startup and includes usable results and log controls',async()=>{
   await expect(page.getByRole('button',{name:'环境检测通过',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'环境检测通过',exact:true}).click();const panel=page.getByRole('dialog');await expect(panel).toContainText('图形兼容');await expect(panel).toContainText('Windows 凭据加密');await expect(panel.getByRole('button',{name:'打开检测日志'})).toBeVisible();
-  await panel.getByRole('button',{name:'重新检查'}).click();await expect(panel).toContainText('满足');await page.screenshot({path:'artifacts/qa/environment-1.3.0.png'});
+  await panel.getByRole('button',{name:'重新检查'}).click();await expect(panel).toContainText('满足');await page.screenshot({path:'artifacts/qa/environment-1.3.1.png'});
   const s=await page.evaluate(()=>window.tokenBalance.state());expect(s.environment.checks.find(c=>c.id==='encryption')?.status).toBe('pass');expect(s.readOnly).toBe(false);
 });
 test('latest, available and download-integrity failures appear without exiting the current app',async()=>{
-  await app.evaluate((_electron,body)=>{globalThis.fetch=async()=>Response.json(body);},metadata('1.3.0'));
+  await app.evaluate((_electron,body)=>{globalThis.fetch=async()=>Response.json(body);},metadata('1.3.1'));
   await page.getByRole('button',{name:'检测新版本',exact:true}).click();const dialog=page.getByRole('dialog');await expect(dialog.getByRole('status')).toContainText('已是最新');
   await app.evaluate((_electron,body)=>{globalThis.fetch=async()=>Response.json(body);},metadata('1.4.0'));
   await dialog.getByRole('button',{name:'检测新版本',exact:true}).click();await expect(dialog.getByRole('status')).toContainText('发现新版本 1.4.0');await expect(dialog.getByRole('button',{name:'下载并自动更新'})).toBeVisible();
-  await app.evaluate(()=>{globalThis.fetch=async()=>new Response('badzip');});await dialog.getByRole('button',{name:'下载并自动更新'}).click();await expect(dialog.getByRole('status')).toContainText('SHA-256');expect((await page.evaluate(()=>window.tokenBalance.state())).version).toBe('1.3.0');await page.screenshot({path:'artifacts/qa/update-integrity-1.3.0.png'});
+  await app.evaluate(()=>{globalThis.fetch=async()=>new Response('badzip');});await dialog.getByRole('button',{name:'下载并自动更新'}).click();await expect(dialog.getByRole('status')).toContainText('SHA-256');expect((await page.evaluate(()=>window.tokenBalance.state())).version).toBe('1.3.1');await page.screenshot({path:'artifacts/qa/update-integrity-1.3.1.png'});
 });
 test('offline check shows recovery guidance and the exact GitHub download link',async()=>{
   await app.evaluate(({shell})=>{globalThis.fetch=async()=>{throw new TypeError('fetch failed');};(globalThis as any).opened=[];shell.openExternal=async url=>{(globalThis as any).opened.push(url);};});
   await page.getByRole('button',{name:'检测新版本',exact:true}).click();const dialog=page.getByRole('dialog');await expect(dialog.getByRole('status')).toContainText('无法连接 GitHub');await dialog.getByRole('button',{name:'在 GitHub 下载'}).click();expect(await app.evaluate(()=>(globalThis as any).opened)).toEqual([`${REPOSITORY}/releases/latest`]);
+});
+test('real Electron updater writes and validates a genuine ASAR without treating it as a directory',async()=>{
+  const input=path.join(dataDir,'asar-input');fs.mkdirSync(input);fs.writeFileSync(path.join(input,'package.json'),JSON.stringify({name:'update-fixture',version:'1.4.0',main:'index.js'}));fs.writeFileSync(path.join(input,'index.js'),'module.exports = 1;');const archive=path.join(dataDir,'fixture.asar');await createPackage(input,archive);
+  const zip=releaseFixture('1.4.0',undefined,fs.readFileSync(archive)),body=metadata('1.4.0');body.assets[0].size=zip.length;body.assets[0].digest='sha256:'+createHash('sha256').update(zip).digest('hex');
+  await app.evaluate((_electron,{body,zip})=>{globalThis.fetch=async url=>String(url).endsWith('/latest')?Response.json(body):new Response(Buffer.from(zip,'base64'));},{body,zip:zip.toString('base64')});
+  expect((await page.evaluate(()=>window.tokenBalance.checkUpdate())).phase).toBe('available');const result=await page.evaluate(()=>window.tokenBalance.downloadUpdate());expect(result.message).not.toContain('Invalid package');expect(result.phase).toBe('ready');
 });
 test('unreadable copied accounts can be archived and recovered without losing original bytes',async()=>{
   await app.close();const original='{"version":1,"encrypted":"Zm9yZWlnbi1tYWNoaW5lLWZpeHR1cmU="}';fs.writeFileSync(path.join(dataDir,'accounts.enc.json'),original);

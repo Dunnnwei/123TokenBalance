@@ -1,11 +1,16 @@
-import fs from 'node:fs';
-import fsp from 'node:fs/promises';
+import nodeFs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import yauzl from 'yauzl';
 import { safeArchivePath } from './update-contract';
+
+// Electron virtualizes *.asar paths. Update archives must be streamed as raw files,
+// including before their ASAR headers have been completely written. Keep this
+// local rather than toggling process.noAsar for unrelated concurrent work.
+const fs:typeof nodeFs=process.versions.electron?require('original-fs'):nodeFs;
+const fsp=fs.promises;
 
 const MAX_TOTAL=1500*1024*1024,MAX_FILES=4000;
 export async function fileHash(file:string):Promise<string>{const hash=createHash('sha256');for await(const chunk of fs.createReadStream(file))hash.update(chunk as Buffer);return hash.digest('hex');}

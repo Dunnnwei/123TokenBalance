@@ -6,6 +6,7 @@ import {_electron} from 'playwright';
 import {build} from 'esbuild';
 const original=path.resolve(process.argv.slice(2).find(v=>!v.startsWith('--'))??'D:/Program Files/123TokenBalance/data');
 const qa=path.resolve('artifacts/qa');
+const version=JSON.parse(fs.readFileSync('package.json','utf8')).version;
 const isolated=fs.mkdtempSync(path.join(qa,'private-local-refresh-'));
 const sha=file=>crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const before=Object.fromEntries(['accounts.enc.json','accounts.enc.json.bak'].filter(name=>fs.existsSync(path.join(original,name))).map(name=>[name,sha(path.join(original,name))]));
@@ -38,7 +39,7 @@ try{
   await app.close();app=undefined;
   report.originalAccountFilesUnchanged=Object.entries(before).every(([name,hash])=>sha(path.join(original,name))===hash);
   report.checkedAt=new Date().toISOString();report.scope='One live read-only refresh using isolated copy; no long-term or cross-machine acceptance.';
-  fs.writeFileSync(path.join(qa,'local-refresh-1.3.0.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));
+  fs.writeFileSync(path.join(qa,`local-refresh-${version}.json`),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));
 }finally{
   if(app)await app.close();
   if(path.dirname(isolated)!==qa||!path.basename(isolated).startsWith('private-local-refresh-'))throw new Error('Unexpected private cleanup target');

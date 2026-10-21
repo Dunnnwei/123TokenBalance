@@ -10,9 +10,9 @@ export function zipFixture(entries:{name:string;content:Buffer|string;attributes
   }
   const table=Buffer.concat(central),end=Buffer.alloc(22);end.writeUInt32LE(0x06054b50);end.writeUInt16LE(entries.length,8);end.writeUInt16LE(entries.length,10);end.writeUInt32LE(table.length,12);end.writeUInt32LE(offset,16);return Buffer.concat([...local,table,end]);
 }
-export function releaseFixture(version='1.3.0',alter?:(entries:{name:string;content:string}[])=>void):Buffer {
+export function releaseFixture(version='1.3.0',alter?:(entries:{name:string;content:Buffer|string}[])=>void,asarContent:Buffer|string='app-resources-fixture'):Buffer {
   const root=`123TokenBalance-${version}-win-x64`;
-  const files=[{name:'123TokenBalance.exe',content:'native-launcher-fixture'},{name:'123TokenBalance.App.exe',content:'app-fixture'},{name:'resources/app.asar',content:'app-resources-fixture'},{name:'runtime-files.txt',content:'runtime-fixture'},{name:'VERSION.txt',content:version+'\nWindows x64 portable\n'}];
+  const files:{name:string;content:Buffer|string}[]=[{name:'123TokenBalance.exe',content:'native-launcher-fixture'},{name:'123TokenBalance.App.exe',content:'app-fixture'},{name:'resources/app.asar',content:asarContent},{name:'runtime-files.txt',content:'runtime-fixture'},{name:'VERSION.txt',content:version+'\nWindows x64 portable\n'}];
   const manifest=files.map(file=>`${createHash('sha256').update(file.content).digest('hex')}  ${file.name}`).join('\n')+'\n';
   files.push({name:'SHA256SUMS.txt',content:manifest});alter?.(files);
   return zipFixture(files.map(e=>({...e,name:`${root}/${e.name}`})));
