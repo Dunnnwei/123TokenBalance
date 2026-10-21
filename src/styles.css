@@ -164,6 +164,7 @@ h1 { margin: 0 0 10px; font-size: 30px; font-weight: 650; letter-spacing: -1px; 
 .switch-row p { font-size: 11px; color: var(--ui-readable-tertiary); margin: 4px 0 0; }
 .editor-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--ui-stroke-tertiary); }
 .editor-footer>div { display: flex; gap: 8px; }
+.quick-dialog .editor-footer { position:sticky; bottom:-1px; z-index:2; background:var(--theme-background); padding-bottom:12px; }
 .section-copy { color: var(--ui-readable-secondary); font-size: 12px; line-height: 1.8; margin-top: 0; margin-bottom: 20px; }
 .mapping-list { margin: 20px 0; }
 .mapping-item { padding: 20px 0; border-top: 1px solid var(--ui-stroke-tertiary); }

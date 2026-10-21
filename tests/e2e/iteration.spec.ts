@@ -85,11 +85,11 @@ test('direct subscription link and focused Alt+O use default-browser action with
   await expect.poll(()=>app.evaluate(()=>(globalThis as any).__opened)).toEqual([url,url]);
 });
 
-test('1.0.0 encrypted accounts remain readable in 1.2.0 without migration or credential loss',async()=>{
+test('1.0.0 encrypted accounts remain readable in 1.3.0 without migration or credential loss',async()=>{
   const legacy=path.resolve('发布/123TokenBalance-1.0.0-win-x64/123TokenBalance.exe');
   expect(fs.existsSync(legacy)).toBe(true);await app.close();await launch(legacy);
   expect((await page.evaluate(()=>window.tokenBalance.state())).version).toBe('1.0.0');
   const account=await add('旧版账号',{secret:'legacy-dummy-secret',headers:'{"X-Project":"legacy-dummy-project"}'});await app.close();await launch();
-  const state=await page.evaluate(()=>window.tokenBalance.state());expect(state.version).toBe('1.2.0');expect(state.warnings).toEqual([]);expect(state.accounts[0].id).toBe(account.id);expect(state.accounts[0].hasSecret).toBe(true);
+  const state=await page.evaluate(()=>window.tokenBalance.state());expect(state.version).toBe('1.3.0');expect(state.warnings).toEqual([]);expect(state.accounts[0].id).toBe(account.id);expect(state.accounts[0].hasSecret).toBe(true);
   await edit('旧版账号');await page.getByRole('button',{name:'显示',exact:true}).click();await expect(page.getByLabel('API Key / OAuth Access Token',{exact:true})).toHaveValue('legacy-dummy-secret');await expect(page.getByLabel('附加请求头（JSON，可选）')).toHaveValue('{"X-Project":"legacy-dummy-project"}');
 });

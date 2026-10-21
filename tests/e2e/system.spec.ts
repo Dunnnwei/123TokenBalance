@@ -10,15 +10,15 @@ const metadata=(version:string)=>({draft:false,prerelease:false,tag_name:`v${ver
 test('environment is inspected on startup and includes usable results and log controls',async()=>{
   await expect(page.getByRole('button',{name:'环境检测通过',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'环境检测通过',exact:true}).click();const panel=page.getByRole('dialog');await expect(panel).toContainText('图形兼容');await expect(panel).toContainText('Windows 凭据加密');await expect(panel.getByRole('button',{name:'打开检测日志'})).toBeVisible();
-  await panel.getByRole('button',{name:'重新检查'}).click();await expect(panel).toContainText('满足');await page.screenshot({path:'artifacts/qa/environment-1.2.0.png'});
+  await panel.getByRole('button',{name:'重新检查'}).click();await expect(panel).toContainText('满足');await page.screenshot({path:'artifacts/qa/environment-1.3.0.png'});
   const s=await page.evaluate(()=>window.tokenBalance.state());expect(s.environment.checks.find(c=>c.id==='encryption')?.status).toBe('pass');expect(s.readOnly).toBe(false);
 });
 test('latest, available and download-integrity failures appear without exiting the current app',async()=>{
-  await app.evaluate((_electron,body)=>{globalThis.fetch=async()=>Response.json(body);},metadata('1.2.0'));
-  await page.getByRole('button',{name:'检测新版本',exact:true}).click();const dialog=page.getByRole('dialog');await expect(dialog.getByRole('status')).toContainText('已是最新');
   await app.evaluate((_electron,body)=>{globalThis.fetch=async()=>Response.json(body);},metadata('1.3.0'));
-  await dialog.getByRole('button',{name:'检测新版本',exact:true}).click();await expect(dialog.getByRole('status')).toContainText('发现新版本 1.3.0');await expect(dialog.getByRole('button',{name:'下载并自动更新'})).toBeVisible();
-  await app.evaluate(()=>{globalThis.fetch=async()=>new Response('badzip');});await dialog.getByRole('button',{name:'下载并自动更新'}).click();await expect(dialog.getByRole('status')).toContainText('SHA-256');expect((await page.evaluate(()=>window.tokenBalance.state())).version).toBe('1.2.0');await page.screenshot({path:'artifacts/qa/update-integrity-1.2.0.png'});
+  await page.getByRole('button',{name:'检测新版本',exact:true}).click();const dialog=page.getByRole('dialog');await expect(dialog.getByRole('status')).toContainText('已是最新');
+  await app.evaluate((_electron,body)=>{globalThis.fetch=async()=>Response.json(body);},metadata('1.4.0'));
+  await dialog.getByRole('button',{name:'检测新版本',exact:true}).click();await expect(dialog.getByRole('status')).toContainText('发现新版本 1.4.0');await expect(dialog.getByRole('button',{name:'下载并自动更新'})).toBeVisible();
+  await app.evaluate(()=>{globalThis.fetch=async()=>new Response('badzip');});await dialog.getByRole('button',{name:'下载并自动更新'}).click();await expect(dialog.getByRole('status')).toContainText('SHA-256');expect((await page.evaluate(()=>window.tokenBalance.state())).version).toBe('1.3.0');await page.screenshot({path:'artifacts/qa/update-integrity-1.3.0.png'});
 });
 test('offline check shows recovery guidance and the exact GitHub download link',async()=>{
   await app.evaluate(({shell})=>{globalThis.fetch=async()=>{throw new TypeError('fetch failed');};(globalThis as any).opened=[];shell.openExternal=async url=>{(globalThis as any).opened.push(url);};});

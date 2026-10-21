@@ -1,5 +1,6 @@
 import type { Account, Metric, MetricMapping, Period, Snapshot } from './types';
 import { AppError, validateSnapshot } from './validation';
+import { webReset } from './web-reset';
 
 export function at(root: unknown, path: string): unknown {
   if (!path.trim()) return undefined;
@@ -63,10 +64,12 @@ export function mappedSnapshot(a: Account, get: (path: string) => unknown, sourc
     const v = value * m.scale, t = extractedNumber(get(m.totalPath), m.totalExtract);
     const total = t === undefined ? undefined : t * m.scale;
     const label = m.label || ({'5h':'5 小时',week:'每周',month:'每月',day:'每日',balance:'余额',other:'额度'}[m.period]);
-    const base = { label, period: m.period, unit: m.unit, resetsAt: date(get(m.resetPath)) };
+    const reset = source === 'web' ? webReset(get(m.resetPath)) : date(get(m.resetPath));
+    const base = { label, period: m.period, unit: m.unit, resetsAt: reset };
     if (m.kind === 'remainingPercent' || m.kind === 'usedPercent') {
       const item = pct(label, m.period, v, get(m.resetPath), m.kind === 'usedPercent');
       if (!item) throw new AppError('parse', `「${label}」百分比超出 0–100，请检查倍率与字段。`);
+      item.resetsAt = reset;
       metrics.push(item);
     } else if (m.kind === 'value') metrics.push({ ...base, value: v });
     else if (m.kind === 'used') {
@@ -130,7 +133,9 @@ export function parseJson(a: Account, input: unknown): Snapshot {
     case 'kimi-code': {
       const u = record(r.usage);
       const derive = (o: Record<string, any>) => num(o.remaining) ?? (num(o.limit) !== undefined && num(o.used) !== undefined ? Math.max(0, num(o.limit)! - num(o.used)!) : undefined);
-      metrics.push(remaining('订阅','week',derive(u),u.limit,'次',u.resetTime));
+      const usageWindow=record(u.window),usageMultiplier=usageWindow.timeUnit==='TIME_UNIT_MINUTE'?1:usageWindow.timeUnit==='TIME_UNIT_HOUR'?60:usageWindow.timeUnit==='TIME_UNIT_DAY'?1440:undefined;
+      const usagePeriod=periodMinutes(usageMultiplier&&num(usageWindow.duration)!*usageMultiplier);
+      metrics.push(remaining(usagePeriod==='other'?'订阅（周期未提供）':'订阅',usagePeriod,derive(u),u.limit,'次',u.resetTime));
       for (const l of array(r.limits)) {
         const w = record(l.window), detail = record(l.detail);
         const mult = w.timeUnit === 'TIME_UNIT_MINUTE' ? 1 : w.timeUnit === 'TIME_UNIT_HOUR' ? 60 : w.timeUnit === 'TIME_UNIT_DAY' ? 1440 : undefined;
@@ -176,7 +181,7 @@ export function parseJson(a: Account, input: unknown): Snapshot {
     }
     default: throw new AppError('config','此平台使用通用连接器，请选择 JSON、HTML 或网页接入并配置字段。');
   }
-  return finish(a, plan, metrics, 'api', a.providerId === 'openrouter' ? '此处为当前 Key 预算，不代表 OpenRouter 账户总余额。' : a.providerId === 'gemini' ? '模型额度周期按服务返回；未假定为 5 小时或周额度。' : undefined);
+  return finish(a, plan, metrics, 'api', a.providerId === 'openrouter' ? '此处为当前 Key 预算，不代表 OpenRouter 账户总余额。' : a.providerId === 'gemini' ? '模型额度周期按服务返回；未假定为 5 小时或周额度。' : a.providerId==='kimi-code' ? '周期按平台明确返回的窗口展示；未声明周期的总额度不假定为周额度。新套餐通常没有周限额，以官方页面为准。' : undefined);
 }
 export function selectors(a: Account): string[] {
   return [...new Set([a.planPath, ...a.mappings.flatMap(m => [m.valuePath,m.totalPath,m.resetPath])].filter(Boolean))];

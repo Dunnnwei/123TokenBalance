@@ -5,7 +5,7 @@ import { spawn } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import type { Account, AppState, Settings, Snapshot } from '../src/core/types';
 import { errorMessage, AppError, safeUrl, validateAccount } from '../src/core/validation';
-import { mappedSnapshot, selectorParts, selectors } from '../src/core/parse';
+import { withBackgroundBrowser } from './browser-reader';
 import { Repository, encodeBackup, decodeBackup } from './repository';
 import { AccountService } from './service';
 import { parseSample, query } from './transport';
@@ -41,53 +41,32 @@ function inspectEnvironment(){environment=environmentReport({root:appRoot,dataPa
 function state():AppState {return{schema:1,accounts:service.list(),settings:repository.data.settings,version,dataPath,secureStorage:safeStorage.isEncryptionAvailable(),warnings:repository.warnings,readOnly:repository.readOnly,environment};}
 function changed(){if(main&&!main.isDestroyed())main.webContents.send('tb:changed',state());}
 function account(id:unknown):Account {if(typeof id!=='string')throw new AppError('config','账号 ID 无效。');const a=repository.data.accounts.find(a=>a.id===id);if(!a)throw new AppError('config','账号已不存在。');return a;}
-function sessionFor(id:string){const s=session.fromPartition(`persist:account-${id}`);s.setPermissionRequestHandler((_w,_p,cb)=>cb(false));s.setPermissionCheckHandler(()=>false);return s;}
+const configuredSessions=new Set<string>();
+function sessionFor(id:string){const s=session.fromPartition(`persist:account-${id}`);if(!configuredSessions.has(id)){configuredSessions.add(id);s.setPermissionRequestHandler((_w,_p,cb)=>cb(false));s.setPermissionCheckHandler(()=>false);s.on('will-download',event=>event.preventDefault());}return s;}
 const allowedNavigation=(url:string)=>{try{return safeUrl(url).protocol==='https:';}catch{return false;}};
 function secureRemote(contents:WebContents){
   contents.on('will-navigate',(e,url)=>{if(!allowedNavigation(url))e.preventDefault();});
   contents.on('will-redirect',(e,url)=>{if(!allowedNavigation(url))e.preventDefault();});
   contents.setWindowOpenHandler(({url})=>allowedNavigation(url)?{action:'allow',overrideBrowserWindowOptions:{autoHideMenuBar:true,webPreferences:{nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true,preload:undefined}}}:{action:'deny'});
   contents.on('did-create-window',child=>secureRemote(child.webContents));
-  contents.session.on('will-download',(event)=>event.preventDefault());
 }
 async function login(a:Account):Promise<void>{
   const url=safeUrl(a.infoUrl).toString();let win=windows.get(a.id);
   if(win&&!win.isDestroyed()){win.show();win.focus();return;}
-  win=new BrowserWindow({width:1120,height:800,title:`${a.platformName} · ${a.account} — 独立登录`,autoHideMenuBar:true,webPreferences:{session:sessionFor(a.id),nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true}});
+  win=new BrowserWindow({width:1120,height:800,title:`${a.platformName} · ${a.account} — 独立登录`,autoHideMenuBar:true,webPreferences:{session:sessionFor(a.browserSessionId??a.id),nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true}});
   windows.set(a.id,win);secureRemote(win.webContents);win.on('closed',()=>windows.delete(a.id));
   await win.loadURL(url).catch(()=>{throw new AppError('network','登录页面未能打开，请检查网址或网络。');});
 }
 async function browserRead(a:Account):Promise<Snapshot>{
-  if(!a.mappings.some(m=>m.valuePath))throw new AppError('config','网页方式需要配置额度 CSS 选择器。请在「编辑 → 字段映射」中填写，可先用 HTML 样本预览。');
-  const win=windows.get(a.id);if(!win||win.isDestroyed())throw new AppError('auth','请先点击此账号的「登录页面」，完成登录并打开用量页面后，再点击刷新。');
-  const contents=captures.remote(a.id)??win.webContents;
-  const expected=safeUrl(a.infoUrl);let current:URL;try{current=new URL(contents.getURL());}catch{throw new AppError('auth','登录页面尚未准备好。');}
-  if(current.origin!==expected.origin)throw new AppError('auth','登录窗口当前位于其他网站。请回到信息页面所属网站后再读取。');
-  if(a.browserAutoRefresh){
-    await new Promise<void>((resolve,reject)=>{
-      const finish=(error?:Error)=>{clearTimeout(timer);contents.removeListener('did-finish-load',loaded);contents.removeListener('did-fail-load',failed);contents.removeListener('destroyed',closed);error?reject(error):resolve();};
-      const loaded=()=>finish();
-      const failed=(_event:unknown,_code:number,_description:string,_url:string,isMainFrame:boolean)=>{if(isMainFrame)finish(new AppError('network','订阅页面刷新失败，请检查登录状态或网络。'));};
-      const closed=()=>finish(new AppError('auth','订阅页面已关闭，请重新打开登录页面。'));
-      const timer=setTimeout(()=>finish(new AppError('timeout','订阅页面刷新超时，请检查登录状态或网络。')),15000);
-      contents.once('did-finish-load',loaded);contents.on('did-fail-load',failed);contents.once('destroyed',closed);
-      // Navigating to an identical URL with a hash may only fire in-page navigation.
-      // An explicit reload guarantees that the saved page actually fetches current usage.
-      if(contents.getURL()===expected.href)contents.reloadIgnoringCache();
-      else void contents.loadURL(expected.href).catch(()=>finish(new AppError('network','订阅页面刷新失败，请检查登录状态或网络。')));
-    });
-  }
-  const specs=selectors(a).map(p=>({path:p,...selectorParts(p)}));
-  const code=`(async() => { let out = {}; for(let attempt=0; attempt<${a.browserAutoRefresh?13:1}; attempt++){ out={}; for (const spec of ${JSON.stringify(specs)}) { try { const el = document.querySelector(spec.selector); out[spec.path] = el ? String(spec.attribute ? el.getAttribute(spec.attribute) ?? '' : el.textContent ?? '').trim().slice(0, 2000) : null; } catch { out[spec.path] = null; } } if(${JSON.stringify(a.mappings.map(m=>m.valuePath))}.every(path=>out[path]&&/\\d/.test(out[path])))return out; if(attempt<${a.browserAutoRefresh?12:0})await new Promise(resolve=>setTimeout(resolve,400)); } return out; })()`;
-  let data:Record<string,unknown>;
-  let timeout:NodeJS.Timeout|undefined;
-  try {data=await Promise.race([contents.executeJavaScriptInIsolatedWorld(999,[{code}]),new Promise<never>((_,reject)=>{timeout=setTimeout(()=>reject(new AppError('timeout','网页读取超时，请确认用量页面已加载完成。')),10000);})]);}
-  finally{clearTimeout(timeout);}
-  // Check navigation again so values from an intervening login redirect cannot be attributed to this account.
-  if(new URL(contents.getURL()).origin!==expected.origin)throw new AppError('auth','读取时页面发生跳转，请返回用量页面重试。');
-  return mappedSnapshot(a,p=>data[p],'web');
+  const open=windows.get(a.id);
+  const remote=captures.remote(a.id)??(open&&!open.isDestroyed()?open.webContents:undefined);
+  return withBackgroundBrowser(a,()=>{
+    const win=new BrowserWindow({show:false,skipTaskbar:true,webPreferences:{session:sessionFor(a.browserSessionId??a.id),nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true,backgroundThrottling:false}});
+    secureRemote(win.webContents);win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
+    return win;
+  },remote);
 }
-async function run(a:Account):Promise<Snapshot>{return query(a,(url,options)=>sessionFor(a.id).fetch(url,options),browserRead);}
+async function run(a:Account):Promise<Snapshot>{return query(a,(url,options)=>sessionFor(a.browserSessionId??a.id).fetch(url,options),browserRead);}
 function startSchedule(){clearInterval(scheduler);const interval=repository.data.settings.intervalMinutes;if(interval>0)scheduler=setInterval(()=>{if(!repository.readOnly)void service.refresh();},interval*60000);}
 function handle(name:string,fn:(...args:any[])=>unknown,allowCapture=false){
   ipcMain.handle('tb:'+name,async(event,...args)=>{
@@ -126,19 +105,19 @@ function register(){
   handle('previewConfig',(text:string)=>parseAgentConfig(text).map(publicAccount));
   handle('importConfig',(text:string)=>{service.import({schema:1,accounts:parseAgentConfig(text),settings:repository.data.settings});return state();});
   handle('readConfigFile',async()=>{const selected=await dialog.showOpenDialog(main!,{title:'选择 Agent 生成的 JSON 配置',properties:['openFile'],filters:[{name:'JSON 配置',extensions:['json']}]});if(selected.canceled||!selected.filePaths[0])return null;const file=selected.filePaths[0];if(fs.statSync(file).size>4*1024*1024)throw new AppError('config','配置文件超过 4 MB。');return fs.readFileSync(file,'utf8').replace(/^\uFEFF/,'');});
-  handle('startCapture',(url:string)=>captures.start(url));
+  handle('startCapture',(url:string,targetId?:string,revision?:number)=>{const a=targetId?account(targetId):undefined;if(a&&(a.revision!==revision||a.status==='refreshing'))throw new AppError('conflict','账号已变化或正在刷新，请稍候重新打开。');return captures.start(a?.infoUrl??url,a);});
   handle('captureInfo',(id:string)=>captures.info(id),true);
   handle('navigateCapture',(id:string,url:string)=>captures.navigate(id,url),true);
   handle('readCapture',(id:string)=>captures.read(id),true);
   handle('focusCapture',(id:string)=>captures.focus(id));
   handle('closeCapture',(id:string)=>captures.close(id));
-  handle('saveCapture',(id:string,name:string,plan:string)=>{captures.save(id,name,plan,service);return state();});
+  handle('saveCapture',(id:string,name:string,plan:string,targetId?:string,revision?:number)=>{captures.save(id,name,plan,service,targetId,revision);return state();});
   handle('save',(a:Account)=>{service.save(a);return state();});
-  handle('remove',async(id:string)=>{account(id);service.remove(id);windows.get(id)?.close();await sessionFor(id).clearStorageData();return state();});
+  handle('remove',async(id:string)=>{const a=account(id);service.remove(id);windows.get(id)?.close();await sessionFor(a.browserSessionId??id).clearStorageData();return state();});
   handle('refresh',async(ids?:string[])=>{if(ids!==undefined&&(!Array.isArray(ids)||ids.length>500||ids.some(id=>typeof id!=='string')))throw new AppError('config','刷新列表无效。');await service.refresh(ids);return state();});
   handle('settings',(s:Settings)=>{service.settings(s);startSchedule();return state();});
   handle('login',async(id:string)=>login(account(id)));
-  handle('clearSession',async(id:string)=>{account(id);windows.get(id)?.close();await sessionFor(id).clearStorageData();await sessionFor(id).clearCache();});
+  handle('clearSession',async(id:string)=>{const a=account(id);windows.get(id)?.close();await sessionFor(a.browserSessionId??id).clearStorageData();await sessionFor(a.browserSessionId??id).clearCache();});
   handle('open',async(url:string)=>{if(typeof url!=='string'||url.length>4096)throw new AppError('config','网址无效。');await shell.openExternal(safeUrl(url).toString());});
   handle('openData',async()=>{const error=await shell.openPath(dataPath);if(error)throw new AppError('data','数据目录无法打开。');});
   handle('preview',(a:Account,sample:string)=>{validateAccount(service.resolve(a));if(typeof sample!=='string')throw new AppError('config','样本无效。');return parseSample(a,sample);});
@@ -178,8 +157,8 @@ else{
     void main.loadFile(uiFile).catch(()=>startupFailure('程序界面资源未能加载。'));main.on('closed',()=>{main=null;app.quit();});
     startSchedule();
     // Stored snapshots remain visible immediately. Network starts after the UI is loaded.
-    main.webContents.once('did-finish-load',()=>{if(!repository.readOnly&&repository.data.settings.intervalMinutes>0)setTimeout(()=>void service.refresh(),500);});
+    main.webContents.once('did-finish-load',()=>{if(!repository.readOnly&&repository.data.settings.intervalMinutes>0)setTimeout(()=>{if(!repository.readOnly&&repository.data.settings.intervalMinutes>0)void service.refresh();},500);});
   }).catch(e=>{log('initialization-failed',e instanceof Error?e.message.slice(0,500):'unknown');if(!process.argv.includes('--update-healthcheck'))dialog.showErrorBox('启动失败','程序无法读取自身资源或数据目录。请查看 data/logs/startup.log，并完整解压发布包到可写目录。');app.exit(1);});
 }
 app.on('window-all-closed',()=>app.quit());
-app.on('before-quit',()=>{quitting=true;clearInterval(scheduler);clearTimeout(startupTimer);});
+app.on('before-quit',()=>{quitting=true;clearInterval(scheduler);clearTimeout(startupTimer);for(const a of repository?.data.accounts??[]){const s=sessionFor(a.browserSessionId??a.id);s.flushStorageData();void s.cookies.flushStore().catch(()=>{});}});

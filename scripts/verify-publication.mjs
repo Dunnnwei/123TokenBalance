@@ -1,0 +1,22 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
+import {execFileSync} from 'node:child_process';
+import {listPackage} from '@electron/asar';
+const version=JSON.parse(fs.readFileSync('package.json','utf8')).version;
+const directory=path.resolve(`发布/123TokenBalance-${version}-win-x64`);
+const candidates=execFileSync('git',['-c','core.quotepath=false','ls-files','-co','--exclude-standard','-z'],{encoding:'utf8'}).split('\0').filter(Boolean);
+const suspicious=[];
+const patterns=[/\b(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{50,})\b/,/\bsk-(?:proj-|ant-api\d+-)?[A-Za-z0-9_-]{40,}\b/,/-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/];
+let textFiles=0;
+for(const file of candidates){if(!/\.(?:[cm]?[jt]sx?|json|md|txt|ya?ml|ps1|cpp|h|css|html)$/i.test(file))continue;const text=fs.readFileSync(file,'utf8');textFiles++;if(patterns.some(p=>p.test(text)))suspicious.push(file);}
+assert.deepEqual(suspicious,[],'Possible credentials in source; file names only, never print matching values.');
+assert(!fs.existsSync(path.join(directory,'data')));
+const files=listPackage(path.join(directory,'resources/app.asar'));
+assert(!files.some(file=>/accounts\.enc|private-local|[\\/]data[\\/]/.test(file)));
+const digest=file=>crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+const matched=['123TokenBalance.App.exe','resources/app.asar'].every(file=>digest(path.join(directory,file))===digest(path.join('artifacts/package/win-unpacked',file)));
+assert(matched,'Release runtime differs from tested runtime.');
+const report={version,result:'passed',checkedAt:new Date().toISOString(),sourceTextFilesChecked:textFiles,commonSecretSignaturesFound:suspicious.length,asarEntries:files.length,personalDataAbsent:true,releaseRuntimeMatchesTestedPackage:matched,scope:'Signature scan and explicit package input checks, not a guarantee against all possible secret formats.'};
+fs.writeFileSync(`发布/publication-scan-${version}.json`,JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));

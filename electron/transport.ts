@@ -48,6 +48,7 @@ export async function query(a: Account, fetcher: Fetcher, browserRead: (a: Accou
       throw new AppError('rate','请求过于频繁，已暂缓刷新；到期后可重试。', Number.isFinite(seconds) ? Math.max(30,Math.min(3600,seconds)) : 60);
     }
     if (response.status >= 300 && response.status < 400) throw new AppError('redirect','查询地址发生重定向。请把表单中的地址更新为最终 HTTPS 查询地址，再重新验证认证目标。');
+    if ([502,503,504].includes(response.status)) throw new AppError('network',`平台暂时不可用（HTTP ${response.status}），已保留旧数据，请稍后重试。`);
     if (!response.ok) throw new AppError('http', `平台返回 HTTP ${response.status}，请检查查询地址或稍后重试。`);
     if (Number(response.headers.get('content-length')) > 2 * 1024 * 1024) throw new AppError('parse','响应过大（超过 2 MB），请改用专用额度查询地址。');
     const reader = response.body?.getReader(); if (!reader) throw new AppError('parse','平台返回空响应。');

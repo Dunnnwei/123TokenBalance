@@ -2,13 +2,14 @@ import type { PageScan, PageField, CaptureResult, Period, MetricMapping } from '
 import { createAccount, PROVIDERS } from './providers';
 import { AppError, safeUrl } from './validation';
 import { extractedNumber, mappedSnapshot } from './parse';
+import { webReset } from './web-reset';
 
-const periodOf = (s: string): Period => /5\s*(?:小时|hours?|hrs?|h\b)|five.hour/i.test(s) ? '5h'
-  : /(?:每|本|当)?周|weekly|per week|7.day|seven.day/i.test(s) ? 'week'
+const periodOf = (s: string): Period => /(?:每|本|当)?周|weekly|per week|7.day|seven.day/i.test(s) ? 'week'
+  : /5\s*(?:小时|hours?|hrs?|h\b)|five.hour/i.test(s) ? '5h'
   : /(?:每|本|当)?月|monthly|per month/i.test(s) ? 'month'
   : /每日|当天|今日|日额度|daily|per day/i.test(s) ? 'day' : 'other';
 const remaining = /剩余|可用|余额|remaining|available|\bleft\b|balance/i;
-const used = /已用|已使用|已消耗|已耗|使用了|used|consumed|utilization/i;
+const used = /已用|已使用|已消耗|已耗|使用了|使用量|消耗量|已使用比例|\bused\b|consumed|utilization|使用率|(?:5\s*小时|本周|每周|周|本月|月)用量/i;
 const labels: Record<Period, string> = {'5h':'5 小时额度',week:'周额度',month:'月额度',day:'日额度',balance:'账户余额',other:'其他额度'};
 
 export function detectProvider(url: string): string {
@@ -25,11 +26,12 @@ export function detectProvider(url: string): string {
 /** Local, deterministic interpretation; page text never becomes an instruction or code. */
 export function recognizePage(scan: PageScan, id: string): CaptureResult {
   const url = safeUrl(scan.url), providerId = detectProvider(scan.url);
-  const draft = {...createAccount(providerId), browserAutoRefresh:true, engine:'browser' as const, auth:'session' as const, endpoint:'', website:url.origin, infoUrl:url.href, headers:'', body:''};
+  const draft = {...createAccount(providerId), browserAutoRefresh:true, browserRecognition:true, engine:'browser' as const, auth:'session' as const, endpoint:'', website:url.origin, infoUrl:url.href, headers:'', body:''};
   if(providerId==='custom')draft.platformName=scan.title.split(/[|｜—]/)[0].trim().slice(0,80)||url.hostname;
   const fields = scan.fields.slice(0,2500), values = new Map<string,string>(), evidence: string[] = [], warnings: string[] = [];
   const accountField=fields.find(f=>/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(f.text));
   draft.account=accountField?.text.slice(0,200)??'';
+  draft.browserIdentity=draft.account||undefined;
   const planFields=[...fields].sort((a,b)=>a.text.length-b.text.length);
   const planField=planFields.find(f=>f.text.length<70&&!/升级|upgrade|购买|buy|\$|¥|￥|价格|price/i.test(f.context)&&/套餐|当前订阅|current plan|your plan|subscription|membership/i.test(f.context)&&/pro|plus|max|team|enterprise|ultra|premium|standard|basic|free|moderato|allegro|andante|会员|专业版|基础版|旗舰版|免费版|企业版/i.test(f.text))
     ??planFields.find(f=>f.text.length<40&&/^(?:ChatGPT |Claude |Gemini |Kimi |Coding )?(?:Pro|Plus|Max|Team|Enterprise|Ultra|Premium|Standard|Basic|Free|Moderato|Allegro|Andante)(?:\s+\d+x)?$/i.test(f.text)&&!/升级|upgrade|购买|buy/i.test(f.context));
@@ -39,13 +41,14 @@ export function recognizePage(scan: PageScan, id: string): CaptureResult {
     if(draft.mappings.length>=30)break;
     if(!field.selector||field.selector.length>480||field.text.length>160)continue;
     const context=field.context.slice(0,700), own=field.text;
-    if(/升级|购买套餐|upgrade|pricing|choose a plan|buy now/i.test(context))continue;
-    const reportedPeriod=periodOf(context),period=reportedPeriod==='other'&&['codex','claude-web'].includes(providerId)&&/current session|当前会话/i.test(context)?'5h':reportedPeriod, isRemaining=remaining.test(own)||(!used.test(own)&&remaining.test(context)), isUsed=used.test(own)||(!remaining.test(own)&&used.test(context));
-    const percent=extractedNumber(own,'percent');
+    if(/升级|购买套餐|upgrade|pricing|choose a plan|buy now|使用限额重置|使用重置额度|完全重置|设置每个应用|允许其他应用|本周期消费|累计消费|充值记录|spending|spent/i.test(context))continue;
+    const kimiMonthly=providerId==='kimi-code'&&/总使用量/.test(context)&&fields.some(f=>/权益额度将按月刷新|monthly.*(?:credit|quota)/i.test(f.text));
+    const reportedPeriod=kimiMonthly?'month':periodOf(context),period=reportedPeriod==='other'&&['codex','claude-web'].includes(providerId)&&/current session|当前会话/i.test(context)?'5h':reportedPeriod, isRemaining=remaining.test(own)||(!used.test(own)&&remaining.test(context)), isUsed=used.test(own)||(!remaining.test(own)&&used.test(context));
+    const percent=extractedNumber(own,'percent') ?? (field.attribute==='aria-valuenow' && /%|百分比|percent/i.test(context) ? extractedNumber(own,'number') : undefined);
     let mapping:MetricMapping|undefined;
     const common={id:`capture-${draft.mappings.length}`,label:labels[period],period,valuePath:field.selector,totalPath:'',resetPath:'',unit:'%',scale:1};
     if(percent!==undefined&&percent>=0&&percent<=100&&(isRemaining!==isUsed)&&(/额度|用量|限制|剩余|quota|usage|limit|remaining|left|session/i.test(context)||period!=='other')){
-      mapping={...common,kind:isUsed?'usedPercent':'remainingPercent',extract:'percent'};
+      mapping={...common,kind:isUsed?'usedPercent':'remainingPercent',extract:field.attribute==='aria-valuenow'?'number':'percent'};
     }else if(percent===undefined){
       const ratio=extractedNumber(own,'ratio-first'),total=extractedNumber(own,'ratio-last');
       const unit=/tokens?|令牌/i.test(context)?'tokens':/积分|credits?|点数/i.test(context)?'点':/requests?|次|prompts?|messages?/i.test(context)?'次':'';
@@ -60,6 +63,10 @@ export function recognizePage(scan: PageScan, id: string): CaptureResult {
       }
     }
     if(!mapping)continue;
+    const resetFields=fields.filter(f=>f.selector!==field.selector && !!webReset(f.text) && ((field.group&&f.group===field.group)||f.context===field.context||periodOf(f.context)===period&&period!=='other'));
+    const sameGroup=resetFields.filter(f=>(field.group&&f.group===field.group)||f.context===field.context);
+    const resetCandidates=sameGroup.length?sameGroup:resetFields;
+    if(resetCandidates.length===1){mapping.resetPath=resetCandidates[0].selector;values.set(mapping.resetPath,resetCandidates[0].text);}
     if(mapping.extract==='number'){
       const magnitude=own.match(/\d[\d,.]*\s*(million|billion|thousand|万|亿|千|[kmb])(?:\b|(?=次|点|元|令牌))/i)?.[1].toLowerCase();
       if(magnitude)mapping.scale=({k:1000,m:1000000,b:1000000000,thousand:1000,million:1000000,billion:1000000000,'万':10000,'亿':100000000,'千':1000} as Record<string,number>)[magnitude];
@@ -77,6 +84,7 @@ export function recognizePage(scan: PageScan, id: string): CaptureResult {
   if(!draft.plan)warnings.push('页面未识别到套餐名称，可以手动补充。');
   warnings.push('请对照当前页面核对结果；页面布局变化后可重新抓取。');
   const snapshot=mappedSnapshot(draft,p=>values.get(p),'web');
+  if(providerId==='kimi-code'&&!snapshot.metrics.some(m=>m.period==='week'))snapshot.note='此页面未提供周限额。Kimi 新套餐为 5 小时限额与月度共享额度，旧套餐才保留周限额；以本账号官方页面为准。';
   return {id,draft,snapshot,evidence,warnings};
 }
 
@@ -93,24 +101,35 @@ export function collectVisiblePage(): PageScan {
     return 'html > '+parts.join(' > ');
   };
   const context=(el:HTMLElement,text:string)=>{
-    let current:HTMLElement|null=el.parentElement,best=text;
-    for(let depth=0;depth<4&&current&&current!==document.body;depth++,current=current.parentElement){
+    let current:HTMLElement|null=el.parentElement,best=text,group='';
+    for(let depth=0;depth<8&&current&&current!==document.body;depth++,current=current.parentElement){
       const t=current.innerText?.replace(/\s+/g,' ').trim()??'';
       if(t.length>700)break;
       if(t.length>best.length)best=t;
-      if(/5\s*(小时|hours?|h\b)|周|月|日额度|weekly|monthly|daily|session|余额|balance|套餐|current plan|your plan/i.test(t))break;
+      group=current?selector(current):group;
+      const semantic=/5\s*(?:小时|hours?|h\b)\s*(?:额度|限额|用量|限制|quota|limit|usage|remaining|used)|(?:每|本)?周(?:额度|限额|用量)|(?:每|本)?月(?:额度|限额|用量)|日额度|weekly|monthly|daily|current session|余额|balance|套餐|current plan|your plan|总使用量|本周期消费|累计消费|spending|spent/i.test(t);
+      if(semantic){
+        const parent=current.parentElement,extra=parent&&parent!==document.body?parent.innerText?.replace(/\s+/g,' ').trim():'';
+        // Include a sibling reset/direction but never combine separate quota cards.
+        if(extra&&extra.length<=700){const periods=(s:string)=>[ /5\s*(?:小时|hours?|h\b)|session/i.test(s),/周|weekly|per week/i.test(s),/月|monthly|总使用量/i.test(s),/余额|balance/i.test(s) ].filter(Boolean).length;if(periods(extra)<=periods(t)){best=extra;group=selector(parent!);}}
+        break;
+      }
     }
-    return best;
+    return {context:best,group};
   };
   const nodes=document.body?document.body.querySelectorAll('*'):[];
   for(let i=0;i<Math.min(nodes.length,16000)&&fields.length<2500;i++){
     const el=nodes[i];if(!(el instanceof HTMLElement)||!visible(el)||el.children.length>3)continue;
     const text=el.innerText?.replace(/\s+/g,' ').trim()??'';
+    if(el.matches('[role="progressbar"][aria-valuenow][aria-valuemax="100"]')){
+      const raw=el.getAttribute('aria-valuenow')??'';const path=selector(el)+'::attr(aria-valuenow)';
+      fields.push({text:raw,selector:path,...context(el,(el.getAttribute('aria-label')??'')+' % '+raw),attribute:'aria-valuenow',tag:el.tagName.toLowerCase()});continue;
+    }
     if(!text||text.length>160)continue;
     if([...el.children].some(c=>c instanceof HTMLElement&&/\d/.test(c.innerText??'')))continue;
     if([...el.children].some(c=>c instanceof HTMLElement&&c.innerText?.replace(/\s+/g,' ').trim()===text))continue;
     const path=selector(el);if(path.length>480)continue;
-    fields.push({text,selector:path,context:context(el,text),tag:el.tagName.toLowerCase()});
+    fields.push({text,selector:path,...context(el,text),tag:el.tagName.toLowerCase()});
   }
   return {url:location.href,title:document.title.slice(0,200),fields};
 }

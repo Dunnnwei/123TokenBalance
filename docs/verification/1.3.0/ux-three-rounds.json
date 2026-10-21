@@ -1,0 +1,432 @@
+{
+  "version": "1.3.0",
+  "method": "Playwright automated desktop interactions plus screenshot inspection; no human participant or cross-week acceptance",
+  "rounds": [
+    {
+      "round": 1,
+      "scope": "Recovery, capture merge, close and restart",
+      "cases": [
+        {
+          "name": "round 1: closing capture and restarting keeps the account session usable without an open website",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2030
+            }
+          ]
+        },
+        {
+          "name": "round 1: detail recovery updates original account and preserves custom metadata",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1609
+            }
+          ]
+        },
+        {
+          "name": "round 1: homepage capture suggests exact identity and merges without creating a duplicate",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2063
+            }
+          ]
+        },
+        {
+          "name": "round 1: account editor contains a direct in-app recovery action",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 614
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "scope": "Incomplete data, expiry, concurrency, session isolation and HTTP recovery",
+      "cases": [
+        {
+          "name": "round 2: delayed DOM and changed selectors still refresh; incomplete data preserves the successful snapshot",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 13507
+            }
+          ]
+        },
+        {
+          "name": "round 2: expired login exposes recovery and never replaces old usage with a login page",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1583
+            }
+          ]
+        },
+        {
+          "name": "round 2: wrong visible identity is rejected and late capture cannot overwrite edits",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2666
+            }
+          ]
+        },
+        {
+          "name": "round 2: clearing the saved merged session actually requires login on next refresh",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1596
+            }
+          ]
+        },
+        {
+          "name": "round 2: two accounts keep separate cookies over repeated concurrent refreshes and restart",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1396
+            }
+          ]
+        },
+        {
+          "name": "round 2: temporary HTTP failure recovers once, sustained failure retains the original snapshot",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 3685
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "scope": "Formal packaged Electron full regression, dark/narrow/keyboard and 1.2.0 migration",
+      "cases": [
+        {
+          "name": "UI account creation, encrypted restart, independent duplicate and deletion",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2414
+            }
+          ]
+        },
+        {
+          "name": "custom connector field mapping previews real JSON and HTML samples",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 994
+            }
+          ]
+        },
+        {
+          "name": "HAUI light, dark, responsive views and accessibility",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2627
+            }
+          ]
+        },
+        {
+          "name": "manual snapshot, detail, input validation and isolated login window security",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 3895
+            }
+          ]
+        },
+        {
+          "name": "dynamic webpage extraction and separate account sessions",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 837
+            }
+          ]
+        },
+        {
+          "name": "backup UI produces encrypted portable file and imports without overwriting accounts",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2725
+            }
+          ]
+        },
+        {
+          "name": "quick capture window recognizes a real DOM, preserves session and refreshes without credentials",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1726
+            }
+          ]
+        },
+        {
+          "name": "saved secrets and headers can be revealed and copied without losing unsaved edits",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1217
+            }
+          ]
+        },
+        {
+          "name": "Agent prompt excludes credentials and returned JSON can be previewed and imported",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1582
+            }
+          ]
+        },
+        {
+          "name": "visible account order can move up/down and persists after restart",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1100
+            }
+          ]
+        },
+        {
+          "name": "custom logo and background support built-ins, independent uploads, opacity and backup",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2221
+            }
+          ]
+        },
+        {
+          "name": "subscription dates, calendar-based suggestions and attention reminders persist",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1238
+            }
+          ]
+        },
+        {
+          "name": "direct subscription link and focused Alt+O use default-browser action with hash intact",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 454
+            }
+          ]
+        },
+        {
+          "name": "1.0.0 encrypted accounts remain readable in 1.3.0 without migration or credential loss",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1386
+            }
+          ]
+        },
+        {
+          "name": "round 1: closing capture and restarting keeps the account session usable without an open website",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2030
+            }
+          ]
+        },
+        {
+          "name": "round 1: detail recovery updates original account and preserves custom metadata",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1609
+            }
+          ]
+        },
+        {
+          "name": "round 1: homepage capture suggests exact identity and merges without creating a duplicate",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2063
+            }
+          ]
+        },
+        {
+          "name": "round 1: account editor contains a direct in-app recovery action",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 614
+            }
+          ]
+        },
+        {
+          "name": "round 2: delayed DOM and changed selectors still refresh; incomplete data preserves the successful snapshot",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 13507
+            }
+          ]
+        },
+        {
+          "name": "round 2: expired login exposes recovery and never replaces old usage with a login page",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1583
+            }
+          ]
+        },
+        {
+          "name": "round 2: wrong visible identity is rejected and late capture cannot overwrite edits",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2666
+            }
+          ]
+        },
+        {
+          "name": "round 2: clearing the saved merged session actually requires login on next refresh",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1596
+            }
+          ]
+        },
+        {
+          "name": "round 2: two accounts keep separate cookies over repeated concurrent refreshes and restart",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1396
+            }
+          ]
+        },
+        {
+          "name": "round 2: temporary HTTP failure recovers once, sustained failure retains the original snapshot",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 3685
+            }
+          ]
+        },
+        {
+          "name": "round 3: table and recovery confirmation fit dark narrow windows and keyboard controls",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1763
+            }
+          ]
+        },
+        {
+          "name": "round 3: upgrading actual 1.2.0 encrypted data preserves identity, credentials and metadata",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1587
+            }
+          ]
+        },
+        {
+          "name": "environment is inspected on startup and includes usable results and log controls",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 558
+            }
+          ]
+        },
+        {
+          "name": "latest, available and download-integrity failures appear without exiting the current app",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 752
+            }
+          ]
+        },
+        {
+          "name": "offline check shows recovery guidance and the exact GitHub download link",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 443
+            }
+          ]
+        },
+        {
+          "name": "unreadable copied accounts can be archived and recovered without losing original bytes",
+          "ok": true,
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 894
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "stats": {
+    "startTime": "2026-10-21T12:08:52.608Z",
+    "duration": 61963.757,
+    "expected": 30,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

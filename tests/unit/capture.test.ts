@@ -28,6 +28,12 @@ describe('page recognition without guesses',()=>{
   it('refuses multiple ambiguous numbers',()=>{expect(extractedNumber('20 days 40 tokens','number')).toBeUndefined();expect(extractedNumber('25% or 75%','percent')).toBeUndefined();});
   it('does not assume an unknown platform session is five hours',()=>expect(read([field('20% used','Current session 20% used')]).snapshot.metrics[0].period).toBe('other'));
   it('keeps explicit token magnitude units',()=>expect(read([field('2M tokens remaining','Monthly quota 2M tokens remaining')]).snapshot.metrics[0].remaining).toBe(2000000));
+  it('does not interpret a banked reset action as usage or a currency spending row as balance',()=>{
+    const r=read([field('80%','5 小时限额 剩余 80%','#five'),field('完全重置（每周 + 5 小时）','使用限额重置 可用 2 历史记录 完全重置（每周 + 5 小时） 使用重置额度','#reset'),field('¥5','本周期消费 ¥5 / 无限制','#spending')]);expect(r.snapshot.metrics).toHaveLength(1);
+  });
+  it('Kimi separates explicit monthly shared quota and five-hour usage without fabricating a week',()=>{
+    const r=recognizePage({url:'https://www.kimi.com/membership/subscription',title:'Kimi',fields:[field('权益额度将按月刷新','套餐','#cycle'),field('36%','总使用量 36% 查看明细','#month'),field('20%','5 小时用量 Code 20%','#five'),field('¥5','当前余额 ¥5 设置 充值','#balance')]},'id');expect(r.snapshot.metrics.map(m=>[m.period,m.remainingPercent])).toEqual([['month',64],['5h',80],['balance',undefined]]);expect(r.snapshot.note).toContain('旧套餐');
+  });
 });
 describe('Agent import and secret-free guidance',()=>{
   const config={format:'123token-config-v1',accounts:[{providerId:'deepseek',account:'work',secret:''}]};

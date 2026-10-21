@@ -8,11 +8,11 @@
 2. 在新窗口完成官方登录，可以使用顶部地址栏切换到真正显示额度的页面。
 3. 页面加载后，点击顶部可信工具栏的「一键抓取」。程序在本机识别可见账号、套餐及 5 小时/周/月/日额度或余额。
 4. 核对主窗口中的预览与官方页面是否一致，补充账号名及套餐名，然后保存。
-5. 保持登录窗口打开，后续「刷新」会重新加载保存的信息网址并读取最新值。关闭窗口后，使用账号菜单的「登录页面」重新打开，已有 Cookie 会保留；登录过期时重新授权。
+5. 保存独立会话后可以关闭网页。刷新会在后台恢复信息页，重启后继续使用持久 Cookie/本地存储。平台要求登录时，点开原账号，使用「程序内打开并重新抓取」更新原记录。首页抓取可选择更新已有账号。
 
 此流程对其他未预置平台同样可尝试，不限制为模板中的品牌。每次添加分配新账号和独立会话，同平台多账号互不覆盖。
 
-识别依赖可见文本与明确的已用/剩余语义；0 是有效数据，没有明确周期时不冒充 5 小时/周/月。页面没有展示的密钥、密码和隐藏输入不抓取。图表、跨域 iframe、模糊标注和网站改版可能需要高级字段配置。识别出的 CSS 定位也可能随页面变化失效，此时可重新添加并核对新记录，或编辑原账号映射。
+识别依赖可见文本与明确的已用/剩余语义；0 是有效数据，没有明确周期时不冒充 5 小时/周/月。页面没有展示的密钥、密码和隐藏输入不抓取。图表、跨域 iframe、模糊标注和网站改版可能需要高级字段配置。自动抓取账号会在刷新时重新做语义识别；自定义 CSS 模式可关闭「自动识别页面额度」。找不到完整周期时保留旧快照，请在原账号重新抓取或编辑映射。
 
 某些平台不允许内嵌浏览器登录。工具不绕过该限制，可以使用官方授权 API、手动会话或手动记录。右侧默认浏览器直达按钮用于查看和手动重置；系统浏览器的会话不会自动导入本工具。
 
@@ -33,7 +33,7 @@ Agent 输出格式为 `123token-config-v1` 的 JSON。选择文件或粘贴 JSON
 | DeepSeek | API Key | 官方 user/balance 余额、赠金、充值金额，区分 CNY/USD。 |
 | 智谱 / Z.ai | 对应地区 Coding Plan Key | 根据 unit/number 识别周期；MCP 单独显示。团队可能需要额外组织/项目请求头。 |
 | MiniMax 中国 / 国际 | Token Plan 或 Coding Plan 专属 Key | 剩余百分比、新旧计数格式和多服务格式。旧套餐可使用 /v1/api/openplatform/coding_plan/remains。usage_count 在历史响应中表示剩余量。 |
-| Kimi Code | Kimi Code Key | 周额度与 5 小时速率窗口；不同于 Moonshot API 金额。 |
+| Kimi Code | Kimi Code Key / 本工具网页会话 | 新套餐为 5 小时限额与月度共享额度，旧套餐才有周限额；以本账号平台返回与页面为准，不同于 Moonshot API 金额。 |
 | Moonshot 中国 / 国际 | 各地区 API Key | 可用余额；地区币种分别为 CNY/USD。 |
 | 硅基流动 | API Key | totalBalance、chargeBalance、balance 分开展示。 |
 | OpenRouter | API Key | 当前 Key 的预算余量，非账户总余额。无上限时只显示已用金额。 |
@@ -74,7 +74,7 @@ Agent 输出格式为 `123token-config-v1` 的 JSON。选择文件或粘贴 JSON
 - 动态网页：在独立登录窗口中完成官方授权，保持窗口停留在信息页面的同一网站，回到工具点刷新。此方式可以读取 JavaScript 渲染后的 DOM。「刷新时重新加载网页」开启后，先加载账号保存的信息网址再等候字段；快速抓取创建的账号默认开启。旧版手动配置的账号保持原先直接读取当前页行为，可在编辑中开启。
 - 映射填写 CSS selector，例如 `#weekly-left`、`.plan-name`。读取属性使用 `.meter::attr(aria-valuenow)`。选择器定位第一个匹配元素；不要使用只在某次加载有效的随机类名。
 - 网页登录窗口无 Node 和本程序的接口权限；每个账号独立 Cookie。系统浏览器中的登录不会自动同步到本工具。
-- 登录窗口未打开、跳到其他网站或找不到字段时会明确提示。未配置字段的网页模板不会显示假数据。
+- 没有可见窗口时自动恢复后台网页；跳站、登录失效或找不到字段时会明确提示。未配置字段的网页模板不会显示假数据。
 - 部分 Google/云平台拒绝嵌入式浏览器授权，可使用官方允许的手动会话/API 方式或手动快照。平台 DOM、反机器人策略和接口形态变化需要重新配置。
 
 ### 手动快照
@@ -109,3 +109,10 @@ Agent 输出格式为 `123token-config-v1` 的 JSON。选择文件或粘贴 JSON
 - 开源接口实现参考（社区维护，非平台公开兼容性承诺）：[CodexBar Codex](https://github.com/steipete/CodexBar/blob/main/docs/codex.md)、[Claude](https://github.com/steipete/CodexBar/blob/main/docs/claude.md)、[Gemini](https://github.com/steipete/CodexBar/blob/main/docs/gemini.md)、[Kimi](https://github.com/steipete/CodexBar/blob/main/docs/kimi.md)、[Z.ai](https://github.com/steipete/CodexBar/blob/main/docs/zai.md)、[MiniMax](https://github.com/steipete/CodexBar/blob/main/docs/minimax.md)
 
 以上 API 适配基于公开资料与样本测试，不等同于逐平台真实账号联网验收。平台页面地址也可能随改版变化，可直接修改。
+
+## 1.3.0 规则核对来源（2026-10-21）
+
+- [Electron persistent session](https://www.electronjs.org/docs/latest/api/session)：持久 partition 不依赖可见窗口生命周期；登录仍受平台 Cookie/令牌策略约束。
+- [OpenAI：Using Codex with your ChatGPT plan](https://help.openai.com/en/articles/11369540-using-codex-with-your-chatgpt-plan)：具体窗口和重置规则以当前账号为准，不固定推算周重置日。
+- [Claude：Usage and length limits](https://support.claude.com/en/articles/11647753-how-do-usage-and-length-limits-work)：会话与周窗口独立。
+- [Kimi：会员额度更新与使用规则](https://www.kimi.com/help/membership/membership-update-rules)：新套餐有 5 小时限额、无周限额，旧套餐保留两种限额；各功能共享月度额度。网页只写本地无时区日期时，本工具保留「重置时间未提供」，不猜时区。

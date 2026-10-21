@@ -1,0 +1,13 @@
+{
+  "result": "passed",
+  "version": "1.3.0",
+  "restrictedPath": "C:\\Windows\\System32;C:\\Windows",
+  "defaultDataBesideExe": true,
+  "initiallyEmpty": true,
+  "retainedAccountAfterMove": true,
+  "sameAccountId": true,
+  "dpapiAvailable": true,
+  "noPlaintextSecretOnDisk": true,
+  "externalNodePythonDotnetNeeded": false,
+  "realAccountOrNetworkUsed": false
+}

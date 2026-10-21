@@ -61,7 +61,7 @@ try{
   // A foreign-machine DPAPI Local State fixture must be archived before Chromium starts.
   fs.writeFileSync(path.join(data,'runtime','Local State'),JSON.stringify({os_crypt:{encrypted_key:Buffer.from('DPAPIforeign-machine-invalid-key').toString('base64')}}));
   const foreign=await diagnostic('foreign-key');assert.equal(foreign.code,0);assert(foreign.text.includes('跨机浏览器配置'));assert(fs.readdirSync(data).some(n=>n.startsWith('runtime-unreadable-')));
-  ui=await start();state=await ui.page.evaluate(()=>window.tokenBalance.state());assert.equal(state.readOnly,true);assert(fs.existsSync(path.join(data,'accounts.enc.json')));await ui.page.screenshot({path:path.join(qa,'foreign-machine-recovery-1.2.0.png')});await close(ui);ui=null;report.cases.push('simulated foreign DPAPI browser state archived; original accounts preserved and recovery UI opens');
+  ui=await start();state=await ui.page.evaluate(()=>window.tokenBalance.state());assert.equal(state.readOnly,true);assert(fs.existsSync(path.join(data,'accounts.enc.json')));await ui.page.screenshot({path:path.join(qa,`foreign-machine-recovery-${report.version}.png`)});await close(ui);ui=null;report.cases.push('simulated foreign DPAPI browser state archived; original accounts preserved and recovery UI opens');
   report.result='passed';
 }catch(error){report.result='failed';report.error=error.stack;throw error;}
-finally{if(ui)await close(ui).catch(()=>{});report.finishedAt=new Date().toISOString();fs.writeFileSync(path.join(qa,'native-lifecycle-1.2.0.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));}
+finally{if(ui)await close(ui).catch(()=>{});report.finishedAt=new Date().toISOString();fs.writeFileSync(path.join(qa,`native-lifecycle-${report.version}.json`),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));}

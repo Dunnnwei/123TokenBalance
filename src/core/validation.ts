@@ -26,6 +26,9 @@ export function parseHeaders(value: string): Record<string, string> {
 export function validateAccount(a: Account): void {
   if (!a || typeof a !== 'object') throw new AppError('config', '账号配置无效。');
   if(a.browserAutoRefresh!==undefined&&typeof a.browserAutoRefresh!=='boolean')throw new AppError('config','网页刷新设置无效。');
+  if(a.browserRecognition!==undefined&&typeof a.browserRecognition!=='boolean')throw new AppError('config','网页识别设置无效。');
+  if(a.browserSessionId!==undefined&&(typeof a.browserSessionId!=='string'||!/^[0-9a-f-]{36}$/i.test(a.browserSessionId)))throw new AppError('config','网页会话标识无效。');
+  if(a.browserIdentity!==undefined&&(typeof a.browserIdentity!=='string'||a.browserIdentity.length>200))throw new AppError('config','网页账号标识无效。');
   for (const key of ['providerId', 'platformName', 'account', 'website', 'infoUrl', 'endpoint', 'secret', 'headers', 'body', 'plan', 'planPath', 'authHeader'] as const) {
     if (typeof a[key] !== 'string' || a[key].length > (['secret', 'headers', 'body'].includes(key) ? 32000 : 2048)) throw new AppError('config', '配置字段无效或过长。');
   }

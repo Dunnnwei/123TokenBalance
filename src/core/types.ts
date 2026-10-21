@@ -19,6 +19,9 @@ export interface Account {
   appearance?: AccountAppearance;
   subscription?: SubscriptionRecord;
   browserAutoRefresh?: boolean;
+  browserRecognition?: boolean;
+  browserSessionId?: string;
+  browserIdentity?: string;
   id: string; revision: number; providerId: string; platformName: string; account: string;
   website: string; infoUrl: string; engine: Engine; endpoint: string; method: 'GET' | 'POST';
   auth: Auth; secret: string; authHeader: string; headers: string; body: string;
@@ -70,17 +73,17 @@ export interface Bridge {
   previewConfig(text: string): Promise<Account[]>;
   importConfig(text: string): Promise<AppState>;
   readConfigFile(): Promise<string | null>;
-  startCapture(url: string): Promise<string>;
+  startCapture(url: string, targetId?: string, revision?: number): Promise<string>;
   captureInfo(id: string): Promise<CaptureInfo>;
   navigateCapture(id: string, url: string): Promise<void>;
   readCapture(id: string): Promise<CaptureResult>;
-  saveCapture(id: string, account: string, plan: string): Promise<AppState>;
+  saveCapture(id: string, account: string, plan: string, targetId?: string, revision?: number): Promise<AppState>;
   closeCapture(id: string): Promise<void>;
   focusCapture(id: string): Promise<void>;
   subscribeCapture(callback: (result: CaptureResult) => void): () => void;
   subscribe(callback: (state: AppState) => void): () => void;
 }
-export interface PageField { text: string; context: string; selector: string; attribute?: string; tag?: string; }
+export interface PageField { text: string; context: string; selector: string; attribute?: string; tag?: string; group?: string; }
 export interface PageScan { url: string; title: string; fields: PageField[]; }
 export interface CaptureInfo { url: string; title: string; loading: boolean; }
 export interface CaptureResult { id: string; draft: Account; snapshot: Snapshot; evidence: string[]; warnings: string[]; }
